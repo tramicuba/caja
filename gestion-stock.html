@@ -2,109 +2,72 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventario | Nostalgia Cubana</title>
-    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <script src="js/app-service.js" type="module"></script>
-
+    <script src="config-auth.js"></script>
     <style>
-        :root { --primary: #2563eb; --dark: #0f172a; --card: #1e293b; --danger: #ef4444; --success: #10b981; --text-muted: #94a3b8; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--dark); color: white; margin: 0; }
-        /* Tus estilos existentes se mantienen igual... */
+        body { font-family: sans-serif; background: #0f172a; color: white; padding: 20px; }
+        .card { background: #1e293b; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #334155; }
+        input { padding: 8px; border-radius: 5px; border: 1px solid #334155; background: #0f172a; color: white; }
+        .btn { padding: 8px 15px; border-radius: 5px; cursor: pointer; border: none; }
+        .btn-add { background: #2563eb; color: white; }
+        .btn-del { background: #ef4444; color: white; }
     </style>
 </head>
 <body>
-
-    <div id="app">
-        </div>
-
-    <script type="module">
-        // Importamos la lógica centralizada
-        import { AppService } from './js/app-service.js';
-
-        // 3. CONEXIÓN LIMPIA
-        const sb = window.sb; // Usamos la instancia global compartida
+    <h1>Gestión de Inventario</h1>
+    <div class="card">
+        <h3>Nuevo Producto</h3>
+        <input type="text" id="nombre" placeholder="Nombre">
+        <input type="number" id="stock" placeholder="Stock Inicial">
+        <input type="number" id="precio" placeholder="Precio Venta">
+        <button class="btn btn-add" onclick="agregarProducto()">Guardar</button>
+    </div>
+    <div class="card">
+        <table>
+            <thead><tr><th>Producto</th><th>Stock</th><th>Precio</th><th>Acciones</th></tr></thead>
+            <tbody id="tabla-productos"></tbody>
+        </table>
+    </div>
+    <script>
+        const sb = window.sb;
         let adminId = null;
-
         async function init() {
-            // Validamos sesión (Solo admins pueden gestionar stock)
-            const perfil = await AppService.validarSesion('admin');
-            
-            if (perfil) {
-                adminId = perfil.id;
+            const user = await validarAccesoGlobal();
+            if (user) {
+                adminId = user.id;
                 fetchData();
-                configurarEventosBasicos();
             }
         }
-
-        // 4. LÓGICA DE NEGOCIO (Usando 'sb')
         async function fetchData() {
-            const { data: productos, error } = await sb
-                .from('productos')
-                .select('*')
-                .eq('owner_id', adminId)
-                .order('nombre', { ascending: true });
-
-            if (error) return console.error(error);
-            renderTable(productos);
+            const { data } = await sb.from('productos').select('*').eq('owner_id', adminId).eq('eliminado', false);
+            const tbody = document.getElementById('tabla-productos');
+            tbody.innerHTML = data.map(p => `
+                <tr>
+                    <td>${p.nombre}</td>
+                    <td>${p.stock}</td>
+                    <td>$${p.precio}</td>
+                    <td><button class="btn btn-del" onclick="eliminar('${p.id}')">Eliminar</button></td>
+                </tr>
+            `).join('');
         }
-
-        async function addItem() {
+        async function agregarProducto() {
             const nombre = document.getElementById('nombre').value;
-            const stock = parseInt(document.getElementById('stock').value);
-            const costo = parseFloat(document.getElementById('precio_compra').value);
-            const venta = parseFloat(document.getElementById('precio').value);
-
-            if (!nombre || isNaN(stock)) return alert('Completa los campos');
-
-            // Inserción atómica usando la instancia global
-            const { data: nuevo, error } = await sb
-                .from('productos')
-                .insert([{ 
-                    nombre, 
-                    stock, 
-                    precio_compra: costo, 
-                    precio: venta, 
-                    owner_id: adminId, 
-                    created_at: new Date().toISOString() 
-                }])
-                .select();
-
-            if (error) return alert('Error: ' + error.message);
-            
-            if (stock > 0) {
-                await sb.from('ajustes_stock').insert({ 
-                    producto_id: nuevo[0].id, 
-                    cantidad: stock, 
-                    motivo: 'Stock inicial', 
-                    owner_id: adminId 
-                });
-            }
-
-            limpiarFormulario();
+            const stock = document.getElementById('stock').value;
+            const precio = document.getElementById('precio').value;
+            await sb.from('productos').insert([{ nombre, stock, precio, owner_id: adminId }]);
             fetchData();
         }
-
-        function configurarEventosBasicos() {
-            document.getElementById('btnSalir').onclick = () => AppService.salir();
-            // ... resto de tus event listeners
-        }
-
-        // Inicializar al cargar
-        init();
-
-        // Hacer funciones accesibles desde el HTML (si usas onclick en etiquetas)
-        window.addItem = addItem;
-        window.removeItem = async (id) => {
-            if (confirm('¿Eliminar producto?')) {
-                await sb.from('productos').delete().eq('id', id);
+        async function eliminar(id) {
+            if(confirm('¿Seguro?')) {
+                await sb.from('productos').update({ eliminado: true }).eq('id', id);
                 fetchData();
             }
-        };
+        }
+        init();
     </script>
 </body>
 </html>
