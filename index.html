@@ -2,234 +2,67 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Acceso | Sistema Gestión Nostalgia Cubana</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Acceso | Nostalgia Cubana</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
     <style>
         :root { --primary: #3b82f6; --dark: #0f172a; --error: #ef4444; }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--dark);
-            color: white;
-            display: flex;
-            height: 100vh;
-            margin: 0;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .login-card {
-            background: #1e293b;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
-            width: 100%;
-            max-width: 380px;
-        }
-        h2 { text-align: center; margin-bottom: 30px; font-weight: 300; letter-spacing: 1px; }
-        .input-group { margin-bottom: 20px; position: relative; }
-        label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: #94a3b8; }
-        input, select {
-            width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #334155;
-            background: #0f172a;
-            color: white;
-            box-sizing: border-box;
-        }
-        /* Wrapper para el campo de contraseña - permite posicionar el botón a la derecha */
-        .password-wrapper {
-            position: relative;
-            width: 100%;
-        }
-        .password-wrapper input {
-            padding-right: 45px; /* espacio para el botón */
-            width: 100%;
-        }
-        .toggle-password {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: #94a3b8;
-            cursor: pointer;
-            font-size: 1.2rem;
-            padding: 0;
-            margin: 0;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 24px;
-            height: 24px;
-            line-height: 1;
-            border-radius: 50%;
-            transition: color 0.2s;
-        }
-        .toggle-password:hover { color: var(--primary); }
-        button {
-            width: 100%;
-            padding: 14px;
-            background: var(--primary);
-            border: none;
-            border-radius: 8px;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
-            margin-top: 10px;
-        }
-        button:hover { background: #2563eb; transform: translateY(-2px); }
-        .error-msg {
-            color: var(--error);
-            font-size: 0.8rem;
-            text-align: center;
-            margin-top: 15px;
-            display: none;
-            background: rgba(239,68,68,0.1);
-            padding: 10px;
-            border-radius: 5px;
-        }
-        /* Contador de usuarios dentro de la tarjeta */
-        .user-counter {
-            margin-top: 25px;
-            text-align: center;
-            font-size: 0.85rem;
-            color: #94a3b8;
-            border-top: 1px solid #334155;
-            padding-top: 20px;
-        }
-        .counter-number {
-            font-weight: bold;
-            color: var(--primary);
-            font-size: 1rem;
-        }
-        @media (max-width: 480px) {
-            .login-card { padding: 25px; }
-            h2 { font-size: 1.5rem; }
-        }
+        body { font-family: 'Inter', sans-serif; background: var(--dark); color: white; display: flex; height: 100vh; align-items: center; justify-content: center; margin: 0; }
+        .login-card { background: #1e293b; padding: 40px; border-radius: 20px; width: 100%; max-width: 380px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+        input, select { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; }
+        button { width: 100%; padding: 12px; background: var(--primary); border: none; color: white; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        #error-msg { color: var(--error); font-size: 14px; text-align: center; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
-<div class="login-card">
-    <h2>Sistema Gestión</h2>
-    <div class="input-group">
-        <label>Correo Electrónico</label>
-        <input type="email" id="email" placeholder="ejemplo@estudio.com">
-    </div>
-    <div class="input-group">
-        <label>Contraseña</label>
-        <div class="password-wrapper">
-            <input type="password" id="password" placeholder="••••••••">
-            <button type="button" class="toggle-password" id="togglePasswordBtn" tabindex="-1">👁️</button>
-        </div>
-    </div>
-    <div class="input-group">
-        <label>Rol de Acceso</label>
+    <div class="login-card">
+        <h2 style="text-align: center; margin-bottom: 20px;">Nostalgia Cubana</h2>
+        <input type="email" id="email" placeholder="Correo electrónico">
+        <input type="password" id="password" placeholder="Contraseña">
         <select id="role">
-            <option value="admin">Administrador (Dueño)</option>
-            <option value="dependiente">Dependiente (Ventas)</option>
+            <option value="dependiente">Dependiente</option>
+            <option value="admin">Administrador</option>
+            <option value="superadmin">Soporte Técnico</option>
         </select>
+        <button id="loginBtn" onclick="login()">Iniciar Sesión</button>
+        <div id="error-msg"></div>
     </div>
-    <button id="loginBtn" onclick="login()">Iniciar Sesión</button>
-    <div id="error" class="error-msg"></div>
 
-    <!-- Contador de usuarios -->
-    <div class="user-counter">
-        <i class="fas fa-users"></i> CANTIDAD DE USUARIOS: 
-        <span id="userCount" class="counter-number">...</span>
-    </div>
-</div>
+    <script>
+        const sb = window.sb;
 
-<script>
-    // Función para cargar el conteo de usuarios
-    async function cargarContadorUsuarios() {
-        const userCountSpan = document.getElementById('userCount');
-        try {
-            const { data, error } = await window.supabaseInstance.rpc('get_total_users');
-            if (error) throw error;
-            userCountSpan.innerText = data;
-        } catch (err) {
-            console.error('Error al obtener contador de usuarios:', err);
-            userCountSpan.innerText = '⚠️';
-        }
-    }
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const selectedRole = document.getElementById('role').value;
+            const btn = document.getElementById('loginBtn');
+            const errorDiv = document.getElementById('error-msg');
 
-    // Mostrar/ocultar contraseña
-    const toggleBtn = document.getElementById('togglePasswordBtn');
-    const passwordInput = document.getElementById('password');
-    if (toggleBtn) {
-        toggleBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passwordInput.setAttribute('type', type);
-            this.textContent = type === 'password' ? '👁️' : '🙈';
-        });
-    }
+            btn.disabled = true;
+            btn.innerText = "Cargando...";
+            errorDiv.style.display = "none";
 
-    async function login() {
-        const sb = window.supabaseInstance;
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const selectedRole = document.getElementById('role').value;
-        const errorDiv = document.getElementById('error');
-        const btn = document.getElementById('loginBtn');
+            try {
+                const { data, error } = await sb.auth.signInWithPassword({ email, password });
+                if (error) throw error;
 
-        errorDiv.style.display = 'none';
-        btn.innerText = "Verificando...";
-        btn.disabled = true;
-
-        try {
-            const { data: authData, error: authError } = await sb.auth.signInWithPassword({ email, password });
-            if (authError) throw new Error("Credenciales inválidas.");
-
-            const { data: profile, error: profileError } = await sb
-                .from('perfiles')
-                .select('*')
-                .eq('id', authData.user.id)
-                .single();
-
-            if (profileError || !profile) throw new Error("Error al obtener perfil.");
-
-            if (profile.eliminado === true) {
-                await sb.auth.signOut();
-                throw new Error("Esta cuenta ha sido desactivada por el administrador.");
-            }
-
-            if (profile.rol !== selectedRole) {
-                throw new Error(`Tu cuenta no tiene permisos de ${selectedRole}.`);
-            }
-
-            if (profile.rol !== 'superadmin') {
-                const vence = new Date(profile.vencimiento);
-                if (new Date() > vence) {
-                    throw new Error("Suscripción vencida. Contacta a soporte.");
+                const profile = await validarAccesoGlobal();
+                if (profile) {
+                    if (profile.rol !== selectedRole) {
+                        await sb.auth.signOut();
+                        throw new Error("El rol no coincide con esta cuenta.");
+                    }
+                    const rutas = { 'superadmin': 'superadmin.html', 'admin': 'admin.html', 'dependiente': 'caja.html' };
+                    window.location.href = rutas[profile.rol];
                 }
+            } catch (err) {
+                errorDiv.innerText = err.message;
+                errorDiv.style.display = "block";
+                btn.disabled = false;
+                btn.innerText = "Iniciar Sesión";
             }
-
-            const paginas = { 
-                'superadmin': 'superadmin.html', 
-                'admin': 'admin.html', 
-                'dependiente': 'caja.html' 
-            };
-            window.location.href = paginas[selectedRole];
-
-        } catch (err) {
-            errorDiv.innerText = err.message;
-            errorDiv.style.display = 'block';
-            btn.innerText = "Iniciar Sesión";
-            btn.disabled = false;
         }
-    }
-
-    // Llamar al cargar la página
-    document.addEventListener('DOMContentLoaded', () => {
-        cargarContadorUsuarios();
-    });
-</script>
+    </script>
 </body>
 </html>
