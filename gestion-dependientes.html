@@ -6,27 +6,39 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
     <style>
-        body { font-family: sans-serif; background: #0f172a; color: white; padding: 20px; }
-        .card { background: #1e293b; padding: 20px; border-radius: 10px; }
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: white; padding: 30px; }
+        .card { background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #334155; }
+        th { text-align: left; color: #94a3b8; border-bottom: 1px solid #334155; padding: 10px; }
+        td { padding: 15px 10px; border-bottom: 1px solid #1e293b; }
+        .status { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+        .status-active { background: #064e3b; color: #34d399; }
     </style>
 </head>
 <body>
-    <h1>Mis Dependientes</h1>
+    <h2>Gestión de Dependientes</h2>
     <div class="card">
-        <tbody id="lista-dep"></tbody>
+        <table>
+            <thead><tr><th>Nombre / Email</th><th>Estado</th><th>Último Acceso</th></tr></thead>
+            <tbody id="lista-dep"></tbody>
+        </table>
     </div>
     <script>
         const sb = window.sb;
         async function init() {
             const user = await validarAccesoGlobal();
             if (user) {
-                const { data } = await sb.from('perfiles').select('*').eq('admin_id', user.id).eq('rol', 'dependiente');
-                document.getElementById('lista-dep').innerHTML = data.map(d => `
+                const { data } = await sb.from('perfiles')
+                    .select('*')
+                    .eq('admin_id', user.id)
+                    .eq('rol', 'dependiente')
+                    .eq('eliminado', false);
+                
+                document.getElementById('lista-dep').innerHTML = (data || []).map(d => `
                     <tr>
                         <td>${d.nombre || d.email}</td>
-                        <td>${d.estado_activo ? 'Activo' : 'Inactivo'}</td>
+                        <td><span class="status ${d.estado_activo ? 'status-active' : ''}">${d.estado_activo ? 'En Turno' : 'Inactivo'}</span></td>
+                        <td>${d.last_sign_in_at ? new Date(d.last_sign_in_at).toLocaleString() : 'Nunca'}</td>
                     </tr>
                 `).join('');
             }
