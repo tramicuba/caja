@@ -2,34 +2,25 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>SuperAdmin | Nostalgia Cubana</title>
+    <title>Panel Maestro</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
 </head>
-<body style="background:#f1f5f9; color:#1e293b; font-family:sans-serif; padding:20px;">
-    <h1 style="background:#0f172a; color:white; padding:20px;">Soporte Técnico - Gestión de Clientes</h1>
-    <table style="width:100%; border-collapse:collapse; background:white;">
-        <thead style="background:#334155; color:white;"><tr><th>Email</th><th>Vencimiento</th><th>Acciones</th></tr></thead>
-        <tbody id="admin-list"></tbody>
-    </table>
+<body style="background:#f1f5f9; font-family:sans-serif; padding:20px;">
+    <h1 style="color:#0f172a;">Soporte Técnico NC</h1>
+    <div id="admins" style="background:white; border-radius:10px; padding:20px;"></div>
     <script>
         const sb = window.sb;
         async function init() {
             const user = await validarAccesoGlobal();
-            if(user && user.rol === 'superadmin') {
+            if (user && user.rol === 'superadmin') {
                 const { data } = await sb.from('perfiles').select('*').eq('rol', 'admin');
-                document.getElementById('admin-list').innerHTML = data.map(a => `
-                    <tr>
-                        <td>${a.email}</td>
-                        <td>${a.vencimiento}</td>
-                        <td><button onclick="extender('${a.id}')">Extender 30 días</button></td>
-                    </tr>
+                document.getElementById('admins').innerHTML = (data || []).map(a => `
+                    <div style="border-bottom:1px solid #eee; padding:10px;">
+                        <b>${a.email}</b> - Vence: ${a.vencimiento}
+                    </div>
                 `).join('');
             }
-        }
-        async function extender(id) {
-            alert('Extendido para ' + id);
-            // Aquí iría el update de la fecha
         }
         init();
     </script>
