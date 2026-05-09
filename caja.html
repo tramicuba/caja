@@ -4,89 +4,111 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Caja | Nostalgia Cubana</title>
-    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="config-auth.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <script src="js/app-service.js" type="module"></script>
-
     <style>
         :root { --primary: #2563eb; --dark: #0f172a; --card: #1e293b; --success: #10b981; }
-        body { font-family: 'Inter', sans-serif; background: var(--dark); color: white; margin: 0; }
-        .app-container { display: grid; grid-template-columns: 1fr 350px; height: 100vh; }
-        .productos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; padding: 20px; overflow-y: auto; }
-        .card { background: var(--card); padding: 15px; border-radius: 12px; cursor: pointer; text-align: center; border: 1px solid #334155; }
-        .carrito { background: #161e2e; border-left: 1px solid #334155; padding: 20px; display: flex; flex-direction: column; }
-        @media (max-width: 768px) { .app-container { grid-template-columns: 1fr; } .carrito { display: none; } } /* Optimización Móvil */
+        body { font-family: 'Inter', sans-serif; background: var(--dark); color: white; margin: 0; display: flex; height: 100vh; }
+        .sidebar { width: 260px; background: var(--card); border-right: 1px solid #334155; padding: 20px; }
+        .main-content { flex-grow: 1; display: grid; grid-template-columns: 1fr 350px; }
+        .productos-grid { padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; overflow-y: auto; }
+        .producto-card { background: var(--card); padding: 15px; border-radius: 12px; text-align: center; cursor: pointer; border: 1px solid #334155; transition: 0.2s; }
+        .producto-card:hover { border-color: var(--primary); }
+        .carrito-panel { background: #161e2e; border-left: 1px solid #334155; padding: 20px; display: flex; flex-direction: column; }
+        .btn-venta { background: var(--success); color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; }
     </style>
 </head>
 <body>
-
-    <div class="app-container">
-        <main>
-            <header style="padding: 20px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between;">
-                <h2>🛒 Caja</h2>
-                <button onclick="ejecutarSalir()" style="background: #ef4444; border: none; color: white; padding: 8px 15px; border-radius: 6px;">Salir</button>
-            </header>
-            
-            <div id="lista-productos" class="productos-grid">
-                </div>
-        </main>
-
-        <aside class="carrito">
-            <h3>Venta Actual</h3>
-            <div id="items-carrito" style="flex-grow: 1;"></div>
-            <div style="border-top: 1px solid #334155; padding-top: 20px;">
-                <h4>Total: <span id="total">$0.00</span></h4>
-                <button id="btn-finalizar" class="btn-success" style="width: 100%; padding: 15px; background: var(--success); border: none; color: white; border-radius: 8px; font-weight: bold;">FINALIZAR VENTA</button>
-            </div>
-        </aside>
+    <div class="sidebar">
+        <h3>Nostalgia Cubana</h3>
+        <p id="userName" style="color: #94a3b8; font-size: 14px;">Cargando...</p>
+        <hr style="border: 0; border-top: 1px solid #334155; margin: 20px 0;">
+        <button onclick="cerrarSesion()" style="background: #ef4444; border: none; color: white; width: 100%; padding: 10px; border-radius: 6px; cursor: pointer;">Cerrar Sesión</button>
     </div>
 
-    <script type="module">
-        import { AppService } from './js/app-service.js';
+    <div class="main-content">
+        <div class="productos-grid" id="lista-productos">
+            </div>
 
-        // 1. Vincular funciones al objeto window para que los botones HTML funcionen
-        window.ejecutarSalir = () => AppService.salir();
-        window.agregarAlCarrito = (id, nombre, precio) => {
-            console.log("Agregado:", nombre);
-            // Lógica de carrito aquí...
-        };
+        <div class="carrito-panel">
+            <h3>Carrito</h3>
+            <div id="items-carrito" style="flex-grow: 1; overflow-y: auto;"></div>
+            <div style="border-top: 1px solid #334155; padding-top: 15px;">
+                <h2 id="total-venta">$0.00</h2>
+                <button class="btn-venta" onclick="procesarVenta()">FINALIZAR VENTA</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const sb = window.sb;
+        let user = null;
+        let carrito = [];
 
         async function init() {
-            // 2. Validación con el nuevo JS (Permite entrar a Admin y Dependiente)
-            const perfil = await AppService.validarSesion('dependiente');
-            
-            if (perfil) {
-                console.log("Acceso concedido a:", perfil.nombre);
+            user = await validarAccesoGlobal();
+            if (user) {
+                document.getElementById('userName').innerText = user.nombre || user.email;
                 cargarProductos();
             }
         }
 
         async function cargarProductos() {
+            const ownerId = user.rol === 'admin' ? user.id : user.admin_id;
+            const { data, error } = await sb.from('productos')
+                .select('*')
+                .eq('owner_id', ownerId)
+                .eq('eliminado', false)
+                .gt('stock', 0);
+            
             const container = document.getElementById('lista-productos');
-            const sb = window.sb; // Usamos la instancia global de app-service.js
-
-            const { data, error } = await sb
-                .from('productos')
-                .select('id, nombre, precio, stock')
-                .gt('stock', 0)
-                .eq('eliminado', false);
-
-            if (error) return console.error("Error cargando productos:", error);
-
             container.innerHTML = data.map(p => `
-                <div class="card" onclick="agregarAlCarrito('${p.id}', '${p.nombre}', ${p.precio})">
-                    <i class="fas fa-box fa-2x" style="margin-bottom: 10px; color: var(--primary);"></i>
-                    <div style="font-weight: 600;">${p.nombre}</div>
+                <div class="producto-card" onclick="agregarCarrito('${p.id}', '${p.nombre}', ${p.precio})">
+                    <div style="font-weight: bold;">${p.nombre}</div>
                     <div style="color: var(--success);">$${p.precio.toFixed(2)}</div>
                     <small style="color: #94a3b8;">Stock: ${p.stock}</small>
                 </div>
             `).join('');
         }
 
-        // Arrancar
+        function agregarCarrito(id, nombre, precio) {
+            const existe = carrito.find(item => item.id === id);
+            if (existe) {
+                existe.cantidad++;
+            } else {
+                carrito.push({ id, nombre, precio, cantidad: 1 });
+            }
+            actualizarCarritoUI();
+        }
+
+        function actualizarCarritoUI() {
+            const container = document.getElementById('items-carrito');
+            let total = 0;
+            container.innerHTML = carrito.map(item => {
+                total += item.precio * item.cantidad;
+                return `<div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>${item.nombre} x${item.cantidad}</span>
+                    <span>$${(item.precio * item.cantidad).toFixed(2)}</span>
+                </div>`;
+            }).join('');
+            document.getElementById('total-venta').innerText = `$${total.toFixed(2)}`;
+        }
+
+        async function procesarVenta() {
+            if (carrito.length === 0) return alert("Carrito vacío");
+            // Aquí iría tu lógica de insert en la tabla 'ventas' y update de stock
+            alert("Venta procesada con éxito");
+            carrito = [];
+            actualizarCarritoUI();
+            cargarProductos();
+        }
+
+        async function cerrarSesion() {
+            await sb.auth.signOut();
+            window.location.href = 'index.html';
+        }
+
         init();
     </script>
 </body>
