@@ -2,91 +2,64 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Administración | Nostalgia Cubana</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Panel Administrativo | Nostalgia Cubana</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="config-auth.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <script src="js/app-service.js" type="module"></script>
-
     <style>
-        :root { --primary: #2563eb; --dark: #0f172a; --card: #1e293b; --text-muted: #94a3b8; }
-        body { font-family: 'Inter', sans-serif; background: var(--dark); color: white; margin: 0; }
-        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; padding: 20px; }
-        .stat-card { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid #334155; }
+        :root { --primary: #2563eb; --dark: #0f172a; --card: #1e293b; --danger: #ef4444; --success: #10b981; --text-muted: #94a3b8; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--dark); color: white; }
+        .sidebar { width: 260px; background: var(--card); height: 100vh; position: fixed; border-right: 1px solid #334155; padding: 30px 20px; }
+        .main-content { margin-left: 260px; padding: 40px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+        .stat-card { background: var(--card); padding: 25px; border-radius: 15px; border: 1px solid #334155; }
+        .btn-logout { background: var(--danger); color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 20px; }
     </style>
 </head>
 <body>
-
-    <div id="app">
-        <header style="padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155;">
-            <h1>Admin Dashboard</h1>
-            <div class="user-info">
-                <span id="admin-name" style="margin-right: 15px; color: var(--text-muted);">Cargando...</span>
-                <button id="btnSalir" style="background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer;">
-                    <i class="fas fa-sign-out-alt"></i> Salir
-                </button>
-            </div>
-        </header>
-
-        <main class="dashboard-grid">
-            <div class="stat-card" onclick="location.href='gestion-stock.html'" style="cursor:pointer">
-                <h3><i class="fas fa-boxes"></i> Inventario</h3>
-                <p>Gestionar productos y existencias</p>
-            </div>
-            <div class="stat-card" onclick="location.href='gestion-dependientes.html'" style="cursor:pointer">
-                <h3><i class="fas fa-users"></i> Dependientes</h3>
-                <p>Control de acceso y personal</p>
-            </div>
-            <div class="stat-card" onclick="location.href='reportes.html'" style="cursor:pointer">
-                <h3><i class="fas fa-chart-line"></i> Reportes</h3>
-                <p>Ventas, ganancias y estadísticas</p>
-            </div>
-        </main>
+    <div class="sidebar">
+        <h2>NC Admin</h2>
+        <p id="adminName" style="color: var(--text-muted); margin-bottom: 20px;">Cargando...</p>
+        <nav>
+            <a href="gestion-stock.html" style="color:white; display:block; margin: 10px 0; text-decoration:none;"><i class="fas fa-box"></i> Inventario</a>
+            <a href="gestion-dependientes.html" style="color:white; display:block; margin: 10px 0; text-decoration:none;"><i class="fas fa-users"></i> Dependientes</a>
+            <a href="reportes.html" style="color:white; display:block; margin: 10px 0; text-decoration:none;"><i class="fas fa-chart-line"></i> Reportes</a>
+        </nav>
+        <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
     </div>
-
-    <script type="module">
-        // Importamos el servicio unificado
-        import { AppService } from './js/app-service.js';
-
-        // 3. CONEXIÓN COMPARTIDA
-        const sb = window.sb; 
-        let perfilAdmin = null;
-
+    <div class="main-content">
+        <h1>Dashboard</h1>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Ventas de Hoy</h3>
+                <h2 id="ventas-hoy">$0.00</h2>
+            </div>
+            <div class="stat-card">
+                <h3>Stock Total</h3>
+                <h2 id="total-stock">0</h2>
+            </div>
+        </div>
+    </div>
+    <script>
+        const sb = window.sb;
         async function init() {
-            // Protección de Seguridad (Claude): Solo admins entran aquí
-            perfilAdmin = await AppService.validarSesion('admin');
-            
-            if (perfilAdmin) {
-                document.getElementById('admin-name').textContent = perfilAdmin.nombre || perfilAdmin.email;
-                cargarResumenRapido();
-                configurarEventos();
+            const user = await validarAccesoGlobal();
+            if (user && user.rol === 'admin') {
+                document.getElementById('adminName').innerText = user.nombre || user.email;
+                cargarDatos(user.id);
             }
         }
-
-        async function cargarResumenRapido() {
-            // Optimización Gemini: Solo pedimos conteos rápidos
-            try {
-                const { count: totalProductos } = await sb
-                    .from('productos')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('owner_id', perfilAdmin.id);
-
-                console.log("Productos bajo gestión:", totalProductos);
-                // Aquí podrías llenar pequeños indicadores en el dashboard
-            } catch (err) {
-                console.error("Error en resumen:", err);
+        async function cargarDatos(ownerId) {
+            const { data: productos } = await sb.from('productos').select('stock').eq('owner_id', ownerId).eq('eliminado', false);
+            if (productos) {
+                const total = productos.reduce((acc, p) => acc + (p.stock || 0), 0);
+                document.getElementById('total-stock').innerText = total;
             }
         }
-
-        function configurarEventos() {
-            // El botón de salir usa la lógica centralizada
-            document.getElementById('btnSalir').onclick = () => AppService.salir();
-        }
-
-        // Arrancamos el panel
+        async function cerrarSesion() { await sb.auth.signOut(); window.location.href = 'index.html'; }
         init();
     </script>
 </body>
