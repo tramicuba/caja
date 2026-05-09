@@ -12,97 +12,81 @@
     <script src="js/app-service.js" type="module"></script>
 
     <style>
-        :root {
-            --primary: #2563eb;
-            --dark: #0f172a;
-            --card: #1e293b;
-            --success: #10b981;
-            --border: #334155;
-        }
-        body { font-family: 'Inter', sans-serif; background: var(--dark); color: white; margin: 0; overflow-x: hidden; }
-        /* Estilos simplificados para el ejemplo */
-        .container { padding: 20px; display: grid; grid-template-columns: 1fr 350px; gap: 20px; }
-        @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+        :root { --primary: #2563eb; --dark: #0f172a; --card: #1e293b; --success: #10b981; }
+        body { font-family: 'Inter', sans-serif; background: var(--dark); color: white; margin: 0; }
+        .app-container { display: grid; grid-template-columns: 1fr 350px; height: 100vh; }
+        .productos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; padding: 20px; overflow-y: auto; }
+        .card { background: var(--card); padding: 15px; border-radius: 12px; cursor: pointer; text-align: center; border: 1px solid #334155; }
+        .carrito { background: #161e2e; border-left: 1px solid #334155; padding: 20px; display: flex; flex-direction: column; }
+        @media (max-width: 768px) { .app-container { grid-template-columns: 1fr; } .carrito { display: none; } } /* Optimización Móvil */
     </style>
 </head>
 <body>
 
-    <div id="app">
-        <header>
-            <button id="menuToggle"><i class="fas fa-bars"></i></button>
-            <h1>Nostalgia Cubana - Caja</h1>
-            <button id="btnSalir" class="btn-danger">Salir</button>
-        </header>
+    <div class="app-container">
+        <main>
+            <header style="padding: 20px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between;">
+                <h2>🛒 Caja</h2>
+                <button onclick="ejecutarSalir()" style="background: #ef4444; border: none; color: white; padding: 8px 15px; border-radius: 6px;">Salir</button>
+            </header>
+            
+            <div id="lista-productos" class="productos-grid">
+                </div>
+        </main>
 
-        <div class="container">
-            <section id="productos-section">
-                <input type="text" id="search" placeholder="Buscar producto...">
-                <div id="lista-productos" class="grid-productos">
-                    </div>
-            </section>
-
-            <aside id="carrito-section">
-                <h3>Venta Actual</h3>
-                <div id="items-carrito"></div>
-                <div class="total">Total: <span id="total-monto">$0.00</span></div>
-                <button id="btn-finalizar" class="btn-success">Finalizar Venta</button>
-            </aside>
-        </div>
+        <aside class="carrito">
+            <h3>Venta Actual</h3>
+            <div id="items-carrito" style="flex-grow: 1;"></div>
+            <div style="border-top: 1px solid #334155; padding-top: 20px;">
+                <h4>Total: <span id="total">$0.00</span></h4>
+                <button id="btn-finalizar" class="btn-success" style="width: 100%; padding: 15px; background: var(--success); border: none; color: white; border-radius: 8px; font-weight: bold;">FINALIZAR VENTA</button>
+            </div>
+        </aside>
     </div>
 
     <script type="module">
-        // Importamos el cerebro central
         import { AppService } from './js/app-service.js';
 
-        // Usamos la instancia global compartida
-        const sb = window.sb; 
-        let usuarioActual = null;
+        // 1. Vincular funciones al objeto window para que los botones HTML funcionen
+        window.ejecutarSalir = () => AppService.salir();
+        window.agregarAlCarrito = (id, nombre, precio) => {
+            console.log("Agregado:", nombre);
+            // Lógica de carrito aquí...
+        };
 
-        // INICIO DE LA APP
         async function init() {
-            // Validamos sesión con el nuevo servicio
-            usuarioActual = await AppService.validarSesion('dependiente');
+            // 2. Validación con el nuevo JS (Permite entrar a Admin y Dependiente)
+            const perfil = await AppService.validarSesion('dependiente');
             
-            if (usuarioActual) {
-                console.log("Sesión activa:", usuarioActual.email);
+            if (perfil) {
+                console.log("Acceso concedido a:", perfil.nombre);
                 cargarProductos();
-                configurarEventos();
             }
         }
 
-        // Lógica de carga optimizada (Capa de Servicio)
         async function cargarProductos() {
             const container = document.getElementById('lista-productos');
-            
-            // Llamamos a Supabase usando la instancia global 'sb'
+            const sb = window.sb; // Usamos la instancia global de app-service.js
+
             const { data, error } = await sb
                 .from('productos')
                 .select('id, nombre, precio, stock')
-                .eq('eliminado', false)
-                .gt('stock', 0);
+                .gt('stock', 0)
+                .eq('eliminado', false);
 
-            if (error) return console.error("Error al cargar:", error);
+            if (error) return console.error("Error cargando productos:", error);
 
             container.innerHTML = data.map(p => `
-                <div class="card-producto" onclick="agregarAlCarrito('${p.id}', '${p.nombre}', ${p.precio})">
-                    <h4>${p.nombre}</h4>
-                    <p>$${p.precio}</p>
-                    <small>Stock: ${p.stock}</small>
+                <div class="card" onclick="agregarAlCarrito('${p.id}', '${p.nombre}', ${p.precio})">
+                    <i class="fas fa-box fa-2x" style="margin-bottom: 10px; color: var(--primary);"></i>
+                    <div style="font-weight: 600;">${p.nombre}</div>
+                    <div style="color: var(--success);">$${p.precio.toFixed(2)}</div>
+                    <small style="color: #94a3b8;">Stock: ${p.stock}</small>
                 </div>
             `).join('');
         }
 
-        function configurarEventos() {
-            // Botón de salir usa el servicio central
-            document.getElementById('btnSalir').onclick = () => AppService.salir();
-            
-            // Menú lateral (UI dinámica)
-            document.getElementById('menuToggle').onclick = () => {
-                document.getElementById('sidebar').classList.toggle('open');
-            };
-        }
-
-        // Arrancamos
+        // Arrancar
         init();
     </script>
 </body>
