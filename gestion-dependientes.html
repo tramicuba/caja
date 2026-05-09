@@ -2,91 +2,35 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Dependientes | Nostalgia Cubana</title>
-    
+    <title>Vendedores | Nostalgia Cubana</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <script src="js/app-service.js" type="module"></script>
-
+    <script src="config-auth.js"></script>
     <style>
-        :root { --primary: #2563eb; --dark: #0f172a; --card: #1e293b; --danger: #ef4444; }
-        body { font-family: 'Inter', sans-serif; background: var(--dark); color: white; margin: 0; }
-        /* Mantén tus estilos CSS de tablas y formularios aquí */
+        body { font-family: sans-serif; background: #0f172a; color: white; padding: 20px; }
+        .card { background: #1e293b; padding: 20px; border-radius: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #334155; }
     </style>
 </head>
 <body>
-
-    <div id="app">
-        <header>
-            <h1>Gestión de Personal</h1>
-            <button id="btnSalir">Cerrar Sesión</button>
-        </header>
-        
-        <main class="container">
-            </main>
+    <h1>Mis Dependientes</h1>
+    <div class="card">
+        <tbody id="lista-dep"></tbody>
     </div>
-
-    <script type="module">
-        // Importamos el servicio central
-        import { AppService } from './js/app-service.js';
-
-        // 3. INSTANCIA LIMPIA
-        const sb = window.sb; // Usamos la instancia global de app-service.js
-        let adminId = null;
-
+    <script>
+        const sb = window.sb;
         async function init() {
-            // Protección de Seguridad: Solo 'admin' o 'superadmin' entran
-            const perfil = await AppService.validarSesion('admin');
-            
-            if (perfil) {
-                adminId = perfil.id;
-                obtenerDependientes();
-                configurarEventos();
+            const user = await validarAccesoGlobal();
+            if (user) {
+                const { data } = await sb.from('perfiles').select('*').eq('admin_id', user.id).eq('rol', 'dependiente');
+                document.getElementById('lista-dep').innerHTML = data.map(d => `
+                    <tr>
+                        <td>${d.nombre || d.email}</td>
+                        <td>${d.estado_activo ? 'Activo' : 'Inactivo'}</td>
+                    </tr>
+                `).join('');
             }
         }
-
-        // 4. LÓGICA DE NEGOCIO REFACTORIZADA
-        async function obtenerDependientes() {
-            // Eliminamos select(*) y pedimos solo lo necesario (Optimización Gemini)
-            const { data: dependientes, error } = await sb
-                .from('perfiles')
-                .select('id, email, nombre, rol, activo')
-                .eq('owner_id', adminId)
-                .neq('rol', 'admin'); // No mostrarse a sí mismo
-
-            if (error) return console.error("Error:", error);
-            renderizarTabla(dependientes);
-        }
-
-        async function crearDependiente(e) {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const nombre = document.getElementById('nombre').value;
-
-            // Nota: El registro de auth requiere lógica de Edge Functions o Admin SDK
-            // Por ahora, usamos la instancia global para la inserción en la tabla
-            const { error } = await sb.from('perfiles').insert([{
-                email,
-                nombre,
-                rol: 'dependiente',
-                owner_id: adminId,
-                activo: true
-            }]);
-
-            if (error) alert("Error al crear: " + error.message);
-            else obtenerDependientes();
-        }
-
-        function configurarEventos() {
-            document.getElementById('btnSalir').onclick = () => AppService.salir();
-            // ... resto de tus listeners
-        }
-
-        // Ejecutar al cargar
         init();
     </script>
 </body>
