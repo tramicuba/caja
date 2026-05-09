@@ -6,24 +6,42 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
     <style>
-        body { font-family: sans-serif; background: #0f172a; color: white; padding: 20px; }
-        .stat-box { background: #1e293b; padding: 20px; border-radius: 10px; display: inline-block; min-width: 200px; }
+        body { font-family: sans-serif; background: #0f172a; color: white; padding: 40px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .stat-card { background: #1e293b; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #334155; }
+        h1 { margin-bottom: 30px; }
     </style>
 </head>
 <body>
-    <h1>Reporte General</h1>
-    <div class="stat-box">
-        <p>Total Vendido</p>
-        <h2 id="total-general">$0.00</h2>
+    <h1>Reporte de Ventas</h1>
+    <div class="grid">
+        <div class="stat-card">
+            <small>Total Bruto</small>
+            <h2 id="total-bruto">$0.00</h2>
+        </div>
+        <div class="stat-card">
+            <small>Ganancia Neta</small>
+            <h2 id="total-ganancia">$0.00</h2>
+        </div>
     </div>
     <script>
         const sb = window.sb;
         async function init() {
             const user = await validarAccesoGlobal();
             if (user) {
-                const { data } = await sb.from('ventas').select('precio_total').eq('owner_id', user.id).eq('eliminada', false);
-                const total = data.reduce((acc, v) => acc + v.precio_total, 0);
-                document.getElementById('total-general').innerText = `$${total.toFixed(2)}`;
+                const { data } = await sb.from('ventas')
+                    .select('precio_total, ganancia')
+                    .eq('owner_id', user.id)
+                    .eq('eliminada', false);
+                
+                const totals = (data || []).reduce((acc, v) => {
+                    acc.bruto += v.precio_total || 0;
+                    acc.neta += v.ganancia || 0;
+                    return acc;
+                }, { bruto: 0, neta: 0 });
+
+                document.getElementById('total-bruto').innerText = `$${totals.bruto.toFixed(2)}`;
+                document.getElementById('total-ganancia').innerText = `$${totals.neta.toFixed(2)}`;
             }
         }
         init();
