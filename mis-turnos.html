@@ -7,16 +7,24 @@
     <script src="config-auth.js"></script>
 </head>
 <body style="background:#0f172a; color:white; font-family:sans-serif; padding:20px;">
-    <h1>Registro de Turnos</h1>
-    <div id="turnos-list"></div>
+    <h3>Registro de Turnos</h3>
+    <table style="width:100%; border-collapse:collapse;">
+        <tbody id="turnos-list"></tbody>
+    </table>
     <script>
         const sb = window.sb;
         async function init() {
             const user = await validarAccesoGlobal();
-            if(user) {
-                const { data } = await sb.from('turnos').select('*').eq('usuario_id', user.id).order('fecha_inicio', {ascending: false});
-                document.getElementById('turnos-list').innerHTML = data.map(t => `
-                    <p>Inicio: ${t.fecha_inicio} | Fin: ${t.fecha_fin || 'Abierto'}</p>
+            if (user) {
+                const { data } = await sb.from('turnos')
+                    .select('*')
+                    .eq('usuario_id', user.id)
+                    .order('fecha_inicio', { ascending: false });
+                
+                document.getElementById('turnos-list').innerHTML = (data || []).map(t => `
+                    <tr><td style="padding:10px; border-bottom:1px solid #334155;">
+                        ${new Date(t.fecha_inicio).toLocaleDateString()} | ${t.fecha_fin ? 'Finalizado' : 'Abierto'}
+                    </td></tr>
                 `).join('');
             }
         }
