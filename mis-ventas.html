@@ -2,24 +2,27 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Mis Ventas | Dependiente</title>
+    <title>Mis Ventas</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
 </head>
 <body style="background:#0f172a; color:white; font-family:sans-serif; padding:20px;">
-    <h1>Mis Ventas del Turno</h1>
-    <table style="width:100%; text-align:left;">
-        <thead><tr><th>Fecha</th><th>Total</th></tr></thead>
-        <tbody id="ventas-body"></tbody>
-    </table>
+    <h3>Historial de Ventas</h3>
+    <div id="historial"></div>
     <script>
         const sb = window.sb;
         async function init() {
             const user = await validarAccesoGlobal();
             if (user) {
-                const { data } = await sb.from('ventas').select('*').eq('vendedor_id', user.id).order('created_at', {ascending: false});
-                document.getElementById('ventas-body').innerHTML = data.map(v => `
-                    <tr><td>${new Date(v.created_at).toLocaleString()}</td><td>$${v.precio_total}</td></tr>
+                const { data } = await sb.from('ventas')
+                    .select('*')
+                    .eq('vendedor_id', user.id)
+                    .order('created_at', { ascending: false });
+                
+                document.getElementById('historial').innerHTML = (data || []).map(v => `
+                    <div style="background:#1e293b; padding:10px; margin-bottom:5px; border-radius:5px;">
+                        ${new Date(v.created_at).toLocaleTimeString()} - Total: <b>$${v.precio_total}</b>
+                    </div>
                 `).join('');
             }
         }
