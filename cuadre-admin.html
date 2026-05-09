@@ -2,21 +2,23 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Cuadre Administrativo</title>
+    <title>Cuadres</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
 </head>
 <body style="background:#0f172a; color:white; font-family:sans-serif; padding:20px;">
-    <h1>Control de Cuadre</h1>
-    <div id="resumen-cuadre"></div>
+    <h2>Cierres de Caja</h2>
+    <div id="lista-cuadres"></div>
     <script>
         const sb = window.sb;
         async function init() {
             const user = await validarAccesoGlobal();
-            if(user) {
+            if (user) {
                 const { data } = await sb.from('cuadres').select('*').eq('admin_id', user.id);
-                document.getElementById('resumen-cuadre').innerHTML = data.map(c => `
-                    <div style="background:#1e293b; margin:10px; padding:15px;">Total Real: $${c.total_real}</div>
+                document.getElementById('lista-cuadres').innerHTML = (data || []).map(c => `
+                    <div style="background:#1e293b; padding:15px; margin-bottom:10px; border-radius:10px;">
+                        Fecha: ${new Date(c.fecha).toLocaleDateString()} | Sistema: $${c.total_sistema} | Real: $${c.total_real}
+                    </div>
                 `).join('');
             }
         }
