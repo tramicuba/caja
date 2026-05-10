@@ -2,448 +2,427 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Caja | Nostalgia Cubana</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Caja Registradora | Nostalgia Cubana</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
     <style>
-        /* Mismos estilos que antes, pero sin las secciones de ventas/turnos */
         :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
+            --primary: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
             --dark: #0f172a;
             --card: #1e293b;
-            --danger: #ef4444;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --text-muted: #94a3b8;
             --border: #334155;
+            --text-muted: #94a3b8;
         }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--dark); color: white; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: var(--dark); 
+            color: white; 
+            display: flex; 
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
         .sidebar {
             width: 260px;
             background: var(--card);
-            height: 100vh;
-            position: fixed;
             border-right: 1px solid var(--border);
-            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
             transition: transform 0.3s ease;
-            z-index: 100;
-            overflow-y: auto;
         }
-        .main-content { margin-left: 260px; padding: 40px; transition: margin 0.3s ease; }
-        .nav-link {
-            display: block;
+
+        .sidebar-header { padding: 30px 20px; text-align: center; }
+        .sidebar-header i { font-size: 2rem; color: var(--primary); margin-bottom: 10px; }
+        
+        .nav-links { flex: 1; padding: 10px; }
+        .nav-links a {
+            display: flex;
+            align-items: center;
             padding: 12px 15px;
             color: var(--text-muted);
             text-decoration: none;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            transition: 0.3s;
-        }
-        .nav-link:hover, .nav-link.active {
-            background: rgba(37,99,235,0.1);
-            color: var(--primary);
-        }
-        .btn-logout {
-            margin-top: 50px;
-            color: var(--danger);
-            cursor: pointer;
-            border: 1px solid var(--danger);
-            padding: 10px;
-            text-align: center;
-            border-radius: 8px;
-            font-size: 0.9rem;
+            border-radius: 10px;
+            margin-bottom: 5px;
             transition: 0.2s;
         }
-        .btn-logout:hover { background: rgba(239,68,68,0.1); }
-        .vencimiento-badge {
-            font-size: 0.72rem;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-weight: 600;
-            display: inline-block;
-            margin-top: 10px;
+        .nav-links a:hover, .nav-links a.active {
+            background: rgba(59, 130, 246, 0.1);
+            color: white;
         }
-        .vence-ok { background: rgba(16,185,129,0.15); color: var(--success); }
-        .vence-pronto { background: rgba(245,158,11,0.15); color: var(--warning); }
+        .nav-links i { width: 25px; margin-right: 10px; }
 
-        /* Estilos de la terminal de ventas */
-        .terminal-layout { display: flex; flex-direction: row; gap: 20px; flex-wrap: wrap; }
-        .products-section { flex: 2; min-width: 250px; }
-        .cart-section { flex: 1; min-width: 250px; background: var(--card); border-radius: 16px; padding: 20px; border: 1px solid var(--border); }
-        .grid-products {
+        /* Main Content */
+        .main-content {
+            flex: 1;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
+            grid-template-columns: 1fr 380px;
+            height: 100vh;
         }
+
+        /* Sección Productos */
+        .products-section {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            border-right: 1px solid var(--border);
+        }
+
+        .search-bar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: var(--dark);
+            padding-bottom: 20px;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 15px 20px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
         .product-card {
             background: var(--card);
-            padding: 15px;
-            border-radius: 16px;
-            text-align: center;
+            padding: 20px;
+            border-radius: 18px;
             border: 1px solid var(--border);
-            transition: 0.2s;
+            text-align: center;
             cursor: pointer;
+            transition: 0.2s;
         }
         .product-card:hover { transform: translateY(-3px); border-color: var(--primary); }
-        .product-name { font-weight: bold; margin-bottom: 5px; }
-        .product-price { color: var(--success); font-weight: 800; font-size: 1.2rem; margin: 8px 0; }
-        .product-stock { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 10px; }
-        .btn-agregar { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 30px; cursor: pointer; font-weight: 600; width: 100%; }
-        .btn-agregar:disabled { background: #475569; cursor: not-allowed; }
+        .product-card .price { font-weight: 700; color: var(--success); display: block; margin-top: 5px; }
+        .product-card .stock { font-size: 0.75rem; color: var(--text-muted); }
+
+        /* Sección Carrito */
+        .cart-section {
+            background: #161e2d;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .cart-items { flex: 1; overflow-y: auto; }
         .cart-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 12px 0;
             border-bottom: 1px solid var(--border);
-            flex-wrap: wrap;
-            gap: 8px;
         }
-        .cart-qty-controls { display: flex; align-items: center; background: #0f172a; border-radius: 30px; padding: 4px 10px; gap: 8px; }
-        .cart-btn-qty { background: var(--primary); border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; color: white; }
-        .cart-subtotal { font-weight: 700; color: var(--success); min-width: 70px; text-align: right; }
-        .cart-item-eliminar { color: var(--danger); cursor: pointer; margin-left: 8px; }
-        .total-box { background: var(--dark); padding: 20px; border-radius: 12px; margin-top: 20px; border: 1px solid var(--border); }
-        .btn-pay { width: 100%; padding: 14px; background: var(--success); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
-        .btn-pay:disabled { background: #475569; cursor: not-allowed; }
-        .search-box input { width: 100%; padding: 12px; border-radius: 30px; border: 1px solid var(--border); background: #0f172a; color: white; margin-bottom: 20px; }
 
-        .turno-btn {
-            background: var(--danger);
-            color: white;
-            border: none;
-            padding: 6px 15px;
-            border-radius: 30px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.85rem;
+        .cart-total {
+            padding-top: 20px;
+            border-top: 2px solid var(--border);
+        }
+
+        .total-row {
             display: flex;
-            align-items: center;
-            gap: 6px;
+            justify-content: space-between;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
         }
-        .turno-btn.activo { background: var(--success); }
-        .turno-btn:hover { filter: brightness(0.9); }
-        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
 
-        .menu-toggle { display: none; position: fixed; top: 15px; left: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; padding: 10px 15px; z-index: 101; cursor: pointer; }
-        @media (max-width: 768px) {
-            .menu-toggle { display: block; }
-            .sidebar { transform: translateX(-100%); width: 80%; max-width: 280px; height: 100vh; }
-            .sidebar.open { transform: translateX(0); }
-            .main-content { margin-left: 0; padding: 60px 15px 20px 15px; }
-            .terminal-layout { flex-direction: column; }
+        .btn-action {
+            width: 100%;
+            padding: 18px;
+            border-radius: 15px;
+            border: none;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
         }
-        .notificacion {
+
+        .btn-pay { background: var(--success); color: white; }
+        .btn-pay:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-turno { background: var(--warning); color: white; }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-content { grid-template-columns: 1fr; }
+            .cart-section { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; padding: 10px; z-index: 100; flex-direction: row; align-items: center; }
+            .sidebar { display: none; }
+        }
+
+        /* Notificaciones */
+        .toast {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background: var(--dark);
-            border-left: 4px solid var(--success);
-            padding: 12px 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            padding: 15px 25px;
+            border-radius: 10px;
+            background: var(--card);
+            border-left: 5px solid var(--primary);
+            box-shadow: 0 10px 15px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease-out;
             z-index: 1000;
-            animation: fadeOut 3s forwards;
         }
-        @keyframes fadeOut {
-            0% { opacity: 1; transform: translateY(0); }
-            70% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-20px); visibility: hidden; }
-        }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
     </style>
 </head>
 <body>
-    <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
-    <div class="sidebar" id="sidebar">
-        <h2 style="color: var(--primary); margin-bottom: 5px;">Nostalgia Cubana</h2>
-        <div id="vencimiento-info" style="margin-bottom: 25px;"></div>
-        <nav>
-            <a href="caja.html" class="nav-link active"><i class="fas fa-cash-register"></i> Caja</a>
-            <a href="mis-ventas.html" class="nav-link"><i class="fas fa-chart-line"></i> Ventas Realizadas</a>
-            <a href="mis-turnos.html" class="nav-link"><i class="fas fa-clipboard-list"></i> CUADRE</a>
-        </nav>
-        <div class="btn-logout" onclick="cerrarSesion()">Cerrar Sesi&oacute;n</div>
-    </div>
 
-    <div class="main-content">
-        <div class="header-top">
-            <h1><i class="fas fa-cash-register"></i> Punto de Venta</h1>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <button id="turnoBtn" class="turno-btn"> Iniciar Turno</button>
-                <div id="user-info" style="color: var(--text-muted);"></div>
-            </div>
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-cash-register"></i>
+            <h2>Caja</h2>
         </div>
-        <div class="search-box"><input type="text" id="search" placeholder="🔍 Buscar producto..."></div>
-        <div class="terminal-layout">
-            <div class="products-section"><div class="grid-products" id="grid-productos"></div></div>
-            <div class="cart-section">
-                <h2><i class="fas fa-shopping-cart"></i> Carrito</h2>
-                <div id="cart-list" style="flex-grow:1; overflow-y:auto; max-height: 400px;"></div>
-                <div class="total-box">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
-                        <span>Total a pagar:</span>
-                        <span id="total-amount" style="font-weight: bold; font-size: 1.5rem;">$0.00</span>
-                    </div>
-                    <button class="btn-pay" id="btn-finalizar">💰 FINALIZAR VENTA</button>
+        <div class="nav-links">
+            <a href="#" class="active"><i class="fas fa-shopping-cart"></i> Nueva Venta</a>
+            <a href="mis-ventas.html"><i class="fas fa-history"></i> Mis Ventas</a>
+            <a href="mis-turnos.html"><i class="fas fa-clock"></i> Mis Turnos</a>
+            <a href="#" onclick="cerrarSesion()"><i class="fas fa-sign-out-alt"></i> Salir</a>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <section class="products-section">
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Buscar producto o código..." oninput="filtrarProductos()">
+            </div>
+            <div id="productsGrid" class="products-grid">
                 </div>
+        </section>
+
+        <section class="cart-section">
+            <div style="margin-bottom: 20px;">
+                <h3>Venta Actual</h3>
+                <p id="vendedorName" style="color: var(--text-muted); font-size: 0.8rem;"></p>
             </div>
-        </div>
-    </div>
+            
+            <div id="cartItems" class="cart-items">
+                </div>
+
+            <div class="cart-total">
+                <div class="total-row">
+                    <span>Total</span>
+                    <span id="totalAmount">$0.00</span>
+                </div>
+                
+                <button id="btnPay" class="btn-action btn-pay" onclick="procesarVenta()" disabled>
+                    <i class="fas fa-check-circle"></i> Finalizar Venta
+                </button>
+
+                <button id="btnTurno" class="btn-action btn-turno" onclick="toggleTurno()">
+                    <i class="fas fa-door-open"></i> <span id="turnoText">Abrir Turno</span>
+                </button>
+            </div>
+        </section>
+    </main>
 
     <script>
-        (function() {
-            const URL_PROYECTO = 'https://pkwfqpnwnrcmbncwkwew.supabase.co';
-            const KEY_PROYECTO = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrd2ZxcG53bnJjbWJuY3drd2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4NTAxODEsImV4cCI6MjA5MzQyNjE4MX0._8QVetaDX1buaLN6kKpQatH8hGas_VL-zCuyDk4B3s4';
-            if (!window.supabaseInstance) window.supabaseInstance = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO);
-        })();
-
         const sb = window.supabaseInstance;
-        let userSession = null;
-        let ownerIdGlobal = null;
-        let vendedorId = null;
-        let turnoActivo = false;
-        let inventario = [];
-        let carrito = [];
+        let localProducts = [];
+        let cart = [];
+        let currentUser = null;
+        let activeTurnoId = null;
 
         async function init() {
-            const { data: { user } } = await sb.auth.getUser();
-            if (!user) { window.location.href = 'index.html'; return; }
-            const { data: profile } = await sb.from('perfiles').select('*').eq('id', user.id).single();
-            if (!profile || profile.eliminado || (profile.rol !== 'dependiente' && profile.rol !== 'admin')) {
-                window.location.href = 'index.html';
-                return;
-            }
-            userSession = profile;
-            vendedorId = profile.id;
-            ownerIdGlobal = profile.rol === 'dependiente' ? profile.admin_id : profile.id;
-            document.getElementById('user-info').innerHTML = `<i class="fas fa-user-circle"></i> ${profile.email}`;
-
-            turnoActivo = profile.turno_activo === true;
-            actualizarBotonTurno();
-            actualizarEstadoVenta();
-
-            if (profile.vencimiento) {
-                const dias = Math.ceil((new Date(profile.vencimiento) - new Date()) / 86400000);
-                const clase = dias <= 7 ? 'vence-pronto' : 'vence-ok';
-                const texto = dias <= 0 ? 'Suscripción vencida' : `Vence en ${dias} días`;
-                document.getElementById('vencimiento-info').innerHTML = `<span class="vencimiento-badge ${clase}">${texto}</span>`;
-            }
-
-            const { data: admin } = await sb.from('perfiles').select('vencimiento').eq('id', ownerIdGlobal).single();
-            if (admin && new Date() > new Date(admin.vencimiento)) {
-                alert("Suscripción vencida. Contacta a soporte.");
-                window.location.href = 'index.html';
-                return;
-            }
+            const access = await validarAccesoGlobal();
+            if (!access) return;
+            
+            currentUser = access.user;
+            document.getElementById('vendedorName').innerText = `Atiende: ${currentUser.email}`;
+            
             await cargarProductos();
-            configurarEventos();
-        }
-
-        async function toggleTurno() {
-            if (turnoActivo) {
-                const confirmar = confirm("¿Seguro que deseas CERRAR tu turno? No podrás vender hasta volver a iniciarlo.");
-                if (confirmar) {
-                    await sb.from('perfiles').update({ turno_activo: false }).eq('id', vendedorId);
-                    const { data: turnoAbierto } = await sb.from('turnos').select('id').eq('vendedor_id', vendedorId).is('fin', null).order('inicio', { ascending: false }).limit(1);
-                    if (turnoAbierto && turnoAbierto.length > 0) {
-                        await sb.from('turnos').update({ fin: new Date().toISOString() }).eq('id', turnoAbierto[0].id);
-                    }
-                    turnoActivo = false;
-                    actualizarBotonTurno();
-                    actualizarEstadoVenta();
-                    mostrarNotificacion("Turno cerrado. Las ventas están deshabilitadas.", "warning");
-                }
-            } else {
-                const confirmar = confirm("¿Seguro que deseas INICIAR tu turno? Podrás realizar ventas.");
-                if (confirmar) {
-                    await sb.from('turnos').insert({ vendedor_id: vendedorId, inicio: new Date().toISOString() });
-                    await sb.from('perfiles').update({ turno_activo: true }).eq('id', vendedorId);
-                    turnoActivo = true;
-                    actualizarBotonTurno();
-                    actualizarEstadoVenta();
-                    mostrarNotificacion("Turno iniciado. ¡Ya puedes vender!", "success");
-                }
-            }
-        }
-
-        function actualizarBotonTurno() {
-            const btn = document.getElementById('turnoBtn');
-            if (turnoActivo) {
-                btn.innerHTML = '<i class="fas fa-stop-circle"></i> Cerrar Turno';
-                btn.classList.add('activo');
-            } else {
-                btn.innerHTML = '<i class="fas fa-play-circle"></i> Iniciar Turno';
-                btn.classList.remove('activo');
-            }
-        }
-
-        function actualizarEstadoVenta() {
-            const btnPagar = document.getElementById('btn-finalizar');
-            btnPagar.disabled = !turnoActivo;
-            btnPagar.title = turnoActivo ? "Finalizar venta" : "Debes iniciar turno para vender";
+            await verificarTurnoAbierto();
         }
 
         async function cargarProductos() {
-            const { data } = await sb.from('productos').select('*').eq('owner_id', ownerIdGlobal).gt('stock', 0);
-            inventario = data || [];
-            renderProductos();
+            const { data, error } = await sb
+                .from('productos')
+                .select('*')
+                .gt('stock', 0)
+                .order('nombre');
+            
+            if (data) {
+                localProducts = data;
+                renderProductos(data);
+            }
         }
 
-        function añadirAlCarrito(id) {
-            if (!turnoActivo) { mostrarNotificacion("Turno cerrado. Inicia turno para vender.", "warning"); return; }
-            const prod = inventario.find(p => String(p.id) === String(id));
-            if (!prod) return alert("Producto no encontrado");
-            const item = carrito.find(i => String(i.id) === String(id));
-            if (item) {
-                if (item.cantidad + 1 > prod.stock) return alert(`Stock insuficiente. Quedan ${prod.stock}`);
-                item.cantidad++;
+        function renderProductos(items) {
+            const grid = document.getElementById('productsGrid');
+            grid.innerHTML = items.map(p => `
+                <div class="product-card" onclick="addToCart('${p.id}')">
+                    <strong>${p.nombre}</strong>
+                    <span class="price">$${p.precio.toFixed(2)}</span>
+                    <span class="stock">Disponibles: ${p.stock}</span>
+                </div>
+            `).join('');
+        }
+
+        function filtrarProductos() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = localProducts.filter(p => p.nombre.toLowerCase().includes(query));
+            renderProductos(filtered);
+        }
+
+        function addToCart(id) {
+            if (!activeTurnoId) {
+                showToast("Debes abrir turno antes de vender", "warning");
+                return;
+            }
+
+            const prod = localProducts.find(p => p.id == id);
+            const inCart = cart.find(item => item.id == id);
+
+            if (inCart) {
+                if (inCart.cantidad < prod.stock) inCart.cantidad++;
+                else showToast("Stock máximo alcanzado", "warning");
             } else {
-                carrito.push({ id: prod.id, nombre: prod.nombre, precio: prod.precio, precio_compra: prod.precio_compra || 0, cantidad: 1 });
+                cart.push({ ...prod, cantidad: 1 });
             }
-            renderCart();
-            renderProductos();
+            updateCartUI();
         }
 
-        function cambiarCantidad(id, delta) {
-            const prod = inventario.find(p => String(p.id) === String(id));
-            const item = carrito.find(i => String(i.id) === String(id));
-            if (!item) return;
-            const nueva = item.cantidad + delta;
-            if (delta > 0 && nueva > prod.stock) return alert(`Stock máximo ${prod.stock}`);
-            if (nueva <= 0) carrito = carrito.filter(i => String(i.id) !== String(id));
-            else item.cantidad = nueva;
-            renderCart();
-            renderProductos();
-        }
-
-        function eliminarDelCarrito(id) {
-            carrito = carrito.filter(i => String(i.id) !== String(id));
-            renderCart();
-            renderProductos();
-        }
-
-        function renderProductos() {
-            const term = (document.getElementById('search').value || '').toLowerCase();
-            const filtrados = inventario.filter(p => p.nombre.toLowerCase().includes(term));
-            const grid = document.getElementById('grid-productos');
-            if (!filtrados.length) {
-                grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);">No hay productos disponibles</div>';
-                return;
-            }
-            grid.innerHTML = filtrados.map(prod => {
-                const usado = (carrito.find(i => String(i.id) === String(prod.id))?.cantidad) || 0;
-                const stockRestante = prod.stock - usado;
-                return `<div class="product-card" data-id="${prod.id}">
-                    <div class="product-name">${escapeHtml(prod.nombre)}</div>
-                    <div class="product-price">$${prod.precio}</div>
-                    <div class="product-stock">Stock: ${stockRestante}</div>
-                    <button class="btn-agregar" ${stockRestante <= 0 ? 'disabled' : ''}>+ Añadir</button>
-                </div>`;
-            }).join('');
-            document.querySelectorAll('.product-card').forEach(card => {
-                const btn = card.querySelector('.btn-agregar');
-                if (btn && !btn.disabled) {
-                    const newBtn = btn.cloneNode(true);
-                    btn.parentNode.replaceChild(newBtn, btn);
-                    newBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        añadirAlCarrito(card.getAttribute('data-id'));
-                    });
-                }
-            });
-        }
-
-        function renderCart() {
-            const list = document.getElementById('cart-list');
-            if (!carrito.length) {
-                list.innerHTML = '<div class="empty-cart" style="text-align:center; color:var(--text-muted); padding:40px;"><i class="fas fa-shopping-cart" style="font-size:3rem;"></i><br>Carrito vacío</div>';
-                document.getElementById('total-amount').innerHTML = '$0.00';
-                return;
-            }
+        function updateCartUI() {
+            const list = document.getElementById('cartItems');
             let total = 0;
-            list.innerHTML = '';
-            carrito.forEach(item => {
-                const subtotal = item.precio * item.cantidad;
+
+            list.innerHTML = cart.map(item => {
+                const subtotal = item.cantidad * item.precio;
                 total += subtotal;
-                list.innerHTML += `<div class="cart-item" data-id="${item.id}">
-                    <div><strong>${escapeHtml(item.nombre)}</strong><br><small>$${item.precio}</small></div>
-                    <div class="cart-qty-controls"><button class="cart-btn-qty dec">-</button><span>${item.cantidad}</span><button class="cart-btn-qty inc">+</button></div>
-                    <div class="cart-subtotal">$${subtotal}</div>
-                    <div class="cart-item-eliminar del"><i class="fas fa-trash-alt"></i></div>
-                </div>`;
-            });
-            document.getElementById('total-amount').innerHTML = `$${total.toFixed(2)}`;
-            document.querySelectorAll('.cart-item').forEach(el => {
-                const id = el.getAttribute('data-id');
-                el.querySelector('.dec').addEventListener('click', () => cambiarCantidad(id, -1));
-                el.querySelector('.inc').addEventListener('click', () => cambiarCantidad(id, 1));
-                el.querySelector('.del').addEventListener('click', () => eliminarDelCarrito(id));
-            });
+                return `
+                    <div class="cart-item">
+                        <div>
+                            <strong>${item.nombre}</strong><br>
+                            <small>${item.cantidad} x $${item.precio.toFixed(2)}</small>
+                        </div>
+                        <div>
+                            <strong>$${subtotal.toFixed(2)}</strong>
+                            <i class="fas fa-times-circle" style="color:var(--danger); margin-left:10px; cursor:pointer" onclick="removeFromCart('${item.id}')"></i>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('totalAmount').innerText = `$${total.toFixed(2)}`;
+            document.getElementById('btnPay').disabled = cart.length === 0;
+        }
+
+        function removeFromCart(id) {
+            cart = cart.filter(i => i.id != id);
+            updateCartUI();
         }
 
         async function procesarVenta() {
-            if (!turnoActivo) { mostrarNotificacion("No puedes vender. El turno está cerrado.", "error"); return; }
-            if (!carrito.length) return alert("Carrito vacío");
-            const btn = document.getElementById('btn-finalizar');
-            btn.disabled = true; btn.innerText = "PROCESANDO...";
             try {
-                for (const item of carrito) {
-                    const totalVenta = item.precio * item.cantidad;
-                    const { error } = await sb.from('ventas').insert({
+                const btn = document.getElementById('btnPay');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+
+                for (const item of cart) {
+                    // 1. Registrar Venta
+                    const { error: vError } = await sb.from('ventas').insert({
                         producto_id: item.id,
+                        vendedor_id: currentUser.id,
                         cantidad: item.cantidad,
-                        precio_total: totalVenta,
-                        total: totalVenta,
-                        precio_compra_momento: item.precio_compra,
-                        vendedor_id: vendedorId,
-                        owner_id: ownerIdGlobal,
-                        created_at: new Date().toISOString()
+                        precio_total: item.cantidad * item.precio,
+                        costo_unitario: item.precio_compra,
+                        owner_id: item.owner_id,
+                        turno_id: activeTurnoId
                     });
-                    if (error) throw error;
-                    const prod = inventario.find(p => String(p.id) === String(item.id));
-                    await sb.from('productos').update({ stock: prod.stock - item.cantidad }).eq('id', item.id);
+                    if (vError) throw vError;
+
+                    // 2. Descontar Stock
+                    const { error: sError } = await sb.rpc('restar_stock', {
+                        row_id: item.id,
+                        cantidad_restar: item.cantidad
+                    });
+                    if (sError) throw sError;
                 }
-                alert("✅ Venta realizada con éxito");
-                carrito = [];
+
+                showToast("Venta realizada con éxito");
+                cart = [];
+                updateCartUI();
                 await cargarProductos();
-                renderCart();
-            } catch (e) {
-                alert("❌ Error: " + e.message);
+
+            } catch (err) {
+                showToast("Error en la venta: " + err.message, "danger");
             } finally {
-                btn.disabled = !turnoActivo;
-                btn.innerText = "💰 FINALIZAR VENTA";
+                const btn = document.getElementById('btnPay');
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> Finalizar Venta';
             }
         }
 
-        function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+        // Lógica de Turnos
+        async function verificarTurnoAbierto() {
+            const { data } = await sb
+                .from('turnos')
+                .select('id')
+                .eq('vendedor_id', currentUser.id)
+                .is('fecha_cierre', null)
+                .single();
 
-        function mostrarNotificacion(mensaje, tipo = "success") {
-            const notif = document.createElement('div');
-            notif.className = 'notificacion';
-            notif.style.borderLeftColor = tipo === 'success' ? 'var(--success)' : (tipo === 'warning' ? 'var(--warning)' : 'var(--danger)');
-            notif.innerHTML = `<i class="fas ${tipo === 'success' ? 'fa-check-circle' : (tipo === 'warning' ? 'fa-exclamation-triangle' : 'fa-times-circle')}"></i> ${mensaje}`;
-            document.body.appendChild(notif);
-            setTimeout(() => notif.remove(), 3000);
+            if (data) {
+                activeTurnoId = data.id;
+                updateTurnoUI(true);
+            }
         }
 
-        function configurarEventos() {
-            document.getElementById('btn-finalizar').onclick = procesarVenta;
-            document.getElementById('search').addEventListener('input', renderProductos);
-            document.getElementById('turnoBtn').addEventListener('click', toggleTurno);
+        async function toggleTurno() {
+            if (activeTurnoId) {
+                if (confirm("¿Cerrar turno actual?")) {
+                    await sb.from('turnos').update({ fecha_cierre: new Date().toISOString() }).eq('id', activeTurnoId);
+                    activeTurnoId = null;
+                    updateTurnoUI(false);
+                }
+            } else {
+                const { data } = await sb.from('turnos').insert({ vendedor_id: currentUser.id }).select().single();
+                activeTurnoId = data.id;
+                updateTurnoUI(true);
+            }
         }
 
-        async function cerrarSesion() { await sb.auth.signOut(); window.location.href = 'index.html'; }
+        function updateTurnoUI(isOpened) {
+            document.getElementById('turnoText').innerText = isOpened ? "Cerrar Turno" : "Abrir Turno";
+            document.getElementById('btnTurno').style.background = isOpened ? "var(--danger)" : "var(--warning)";
+        }
 
-        const toggleMenu = document.getElementById('menuToggle');
-        const sidebar = document.getElementById('sidebar');
-        toggleMenu.addEventListener('click', () => sidebar.classList.toggle('open'));
-        document.addEventListener('click', (e) => { if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !toggleMenu.contains(e.target) && sidebar.classList.contains('open')) sidebar.classList.remove('open'); });
+        function showToast(msg, type = "success") {
+            const t = document.createElement('div');
+            t.className = 'toast';
+            t.innerText = msg;
+            if (type === "danger") t.style.borderLeftColor = "var(--danger)";
+            if (type === "warning") t.style.borderLeftColor = "var(--warning)";
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        async function cerrarSesion() {
+            await sb.auth.signOut();
+            window.location.href = 'index.html';
+        }
 
         init();
     </script>
