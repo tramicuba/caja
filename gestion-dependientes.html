@@ -2,141 +2,211 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Gestión de Dependientes | Nostalgia Cubana</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendedores | Nostalgia Cubana</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
     <style>
-        :root { --primary: #2563eb; --dark: #0f172a; --card: #1e293b; --danger: #ef4444; --success: #10b981; --text-muted: #94a3b8; }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--dark); color: white; }
-        .sidebar { width: 260px; background: var(--card); height: 100vh; position: fixed; border-right: 1px solid #334155; padding: 30px 20px; transition: transform 0.3s; z-index: 100; overflow-y: auto; }
-        .main-content { margin-left: 260px; padding: 40px; transition: margin 0.3s; }
-        .nav-link { display: block; padding: 12px 15px; color: var(--text-muted); text-decoration: none; border-radius: 8px; margin-bottom: 10px; }
-        .nav-link:hover, .nav-link.active { background: rgba(37,99,235,0.1); color: var(--primary); }
-        .card { background: var(--card); padding: 25px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 30px; }
-        input, select { background: #0f172a; border: 1px solid #334155; color: white; padding: 12px; width: 100%; border-radius: 6px; }
-        .btn-primary { background: var(--primary); color: white; padding: 12px 25px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
-        .btn-danger { background: rgba(239,68,68,0.1); color: var(--danger); border: 1px solid var(--danger); padding: 8px 15px; border-radius: 6px; cursor: pointer; }
-        .btn-success { background: rgba(16,185,129,0.1); color: var(--success); border: 1px solid var(--success); padding: 8px 15px; border-radius: 6px; cursor: pointer; }
-        .table-container { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; min-width: 500px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #334155; }
-        .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
-        .badge-active { background: rgba(16,185,129,0.15); color: var(--success); }
-        .badge-inactive { background: rgba(239,68,68,0.15); color: var(--danger); }
-        .btn-logout { margin-top: 50px; color: var(--danger); cursor: pointer; border: 1px solid var(--danger); padding: 10px; text-align: center; border-radius: 8px; }
-        .alert { padding: 12px; border-radius: 8px; margin-top: 15px; display: none; }
-        .alert-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--danger); }
-        .alert-success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: var(--success); }
-        .menu-toggle { display: none; position: fixed; top: 15px; left: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; padding: 10px 15px; z-index: 101; cursor: pointer; }
-        @media (max-width: 768px) {
-            .menu-toggle { display: block; }
-            .sidebar { transform: translateX(-100%); position: fixed; width: 80%; max-width: 280px; }
-            .sidebar.open { transform: translateX(0); }
-            .main-content { margin-left: 0; padding: 60px 15px 20px 15px; }
-            .card { padding: 15px; }
-            .btn-primary { width: 100%; }
+        :root {
+            --primary: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --card: #1e293b;
+            --border: #334155;
+            --text-muted: #94a3b8;
         }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--dark); color: white; display: flex; height: 100vh; }
+
+        .sidebar { width: 260px; background: var(--card); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .sidebar-header { padding: 30px 20px; text-align: center; }
+        .nav-links { flex: 1; padding: 10px; }
+        .nav-links a {
+            display: flex; align-items: center; padding: 12px 15px; color: var(--text-muted);
+            text-decoration: none; border-radius: 10px; margin-bottom: 5px;
+        }
+        .nav-links a:hover, .nav-links a.active { background: rgba(59, 130, 246, 0.1); color: white; }
+        .nav-links i { width: 25px; margin-right: 10px; }
+
+        .main-content { flex: 1; overflow-y: auto; padding: 30px; }
+        
+        .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+
+        /* Formulario */
+        .card-form { background: var(--card); border: 1px solid var(--border); padding: 25px; border-radius: 20px; margin-bottom: 30px; }
+        .grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: flex-end; }
+        
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
+        input {
+            padding: 12px; background: #0f172a; border: 1px solid var(--border);
+            border-radius: 10px; color: white;
+        }
+
+        /* Tabla */
+        .table-container { background: var(--card); border-radius: 20px; border: 1px solid var(--border); overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: rgba(255,255,255,0.03); padding: 15px 20px; text-align: left; color: var(--text-muted); font-size: 0.8rem; }
+        td { padding: 15px 20px; border-bottom: 1px solid var(--border); }
+
+        .status-pill { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; }
+        .active { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .inactive { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+
+        .btn { padding: 10px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; transition: 0.3s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-action { background: #334155; color: white; font-size: 0.8rem; padding: 6px 12px; }
+        .btn-action:hover { background: var(--primary); }
+
     </style>
 </head>
 <body>
-    <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
-    <div class="sidebar" id="sidebar">
-        <h2 style="color: var(--primary);">Nostalgia Cubana</h2>
-        <div id="vencimiento-info" style="margin-bottom: 25px;"></div>
-        <nav>
-            <a href="admin.html" class="nav-link"><i class="fas fa-home"></i> Inicio</a>
-            <a href="gestion-stock.html" class="nav-link"><i class="fas fa-box"></i> Inventario</a>
-            <a href="reportes.html" class="nav-link"><i class="fas fa-chart-bar"></i> Reportes de Ventas</a>
-            <a href="cuadre-admin.html" class="nav-link"><i class="fas fa-clipboard-list"></i> Cuadre Administrador</a>
-            <a href="gestion-dependientes.html" class="nav-link active"><i class="fas fa-users"></i> Dependientes</a>
-        </nav>
-        <div class="btn-logout" onclick="cerrarSesion()">Cerrar Sesi&oacute;n</div>
-    </div>
 
-    <div class="main-content">
-        <h1>Gestión de Dependientes</h1>
-        <div class="card">
-            <h3>Registrar Nuevo Vendedor</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-                <div><label>Correo Electrónico</label><input type="email" id="dep-email" placeholder="vendedor@correo.com"></div>
-                <div><label>Contraseña Temporal</label><input type="password" id="dep-password" placeholder="Mínimo 6 caracteres"></div>
-            </div>
-            <button class="btn-primary" id="btnCrear" onclick="crearDependiente()"><i class="fas fa-user-plus"></i> Crear Cuenta del Vendedor</button>
-            <div id="alert-msg" class="alert"></div>
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <h3>Administración</h3>
         </div>
-        <div class="card">
-            <h3>Vendedores Registrados</h3>
-            <div class="table-container">
-                <table>
-                    <thead><tr><th>Email</th><th>Estado</th><th>Acciones</th></tr></thead>
-                    <tbody id="tabla-dependientes"><tr><td colspan="3">Cargando...</td></tr></tbody>
-                </table>
-            </div>
+        <div class="nav-links">
+            <a href="admin.html"><i class="fas fa-chart-line"></i> Dashboard</a>
+            <a href="gestion-stock.html"><i class="fas fa-cubes"></i> Productos</a>
+            <a href="#" class="active"><i class="fas fa-users"></i> Vendedores</a>
+            <a href="reportes.html"><i class="fas fa-file-invoice-dollar"></i> Reportes</a>
+            <a href="#" onclick="cerrarSesion()"><i class="fas fa-sign-out-alt"></i> Salir</a>
         </div>
-    </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="header-actions">
+            <h1>Gestión de Vendedores</h1>
+        </div>
+
+        <div class="card-form">
+            <h3 style="margin-bottom: 15px;">Registrar Nuevo Trabajador</h3>
+            <div class="grid-form">
+                <div class="form-group">
+                    <label>Correo Electrónico</label>
+                    <input type="email" id="dep_email" placeholder="empleado@correo.com">
+                </div>
+                <div class="form-group">
+                    <label>Contraseña Temporal</label>
+                    <input type="password" id="dep_pass" placeholder="******">
+                </div>
+                <button class="btn btn-primary" onclick="crearVendedor()">Registrar Vendedor</button>
+            </div>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 10px;">
+                * El vendedor usará estas credenciales para entrar a la pantalla de Caja.
+            </p>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Estado</th>
+                        <th>Último Acceso</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="vendedoresBody">
+                    </tbody>
+            </table>
+        </div>
+    </main>
 
     <script>
-        const sb = window.supabaseInstance; let adminId = null, adminVencimiento = null;
+        const sb = window.supabaseInstance;
+        let currentUser = null;
+
         async function init() {
-            const { data: { user } } = await sb.auth.getUser();
-            if(!user){ window.location.href='index.html'; return; }
-            const { data: perfil } = await sb.from('perfiles').select('*').eq('id',user.id).single();
-            if(!perfil || perfil.rol !== 'admin' || perfil.eliminado){ window.location.href='index.html'; return; }
-            adminId = perfil.id; adminVencimiento = perfil.vencimiento;
-            if(perfil.vencimiento){
-                const dias = Math.ceil((new Date(perfil.vencimiento) - new Date()) / (1000*60*60*24));
-                const clase = dias<=7?'vence-pronto':'vence-ok'; const texto = dias<=0?'Suscripción vencida':`Vence en ${dias} días`;
-                document.getElementById('vencimiento-info').innerHTML = `<span class="vencimiento-badge ${clase}">${texto}</span>`;
+            const access = await validarAccesoGlobal();
+            if (!access) return;
+            currentUser = access.user;
+            listarVendedores();
+        }
+
+        async function listarVendedores() {
+            const { data, error } = await sb
+                .from('perfiles')
+                .select('*')
+                .eq('admin_id', currentUser.id)
+                .eq('rol', 'dependiente');
+
+            if (data) {
+                const tbody = document.getElementById('vendedoresBody');
+                tbody.innerHTML = data.map(v => `
+                    <tr>
+                        <td>${v.email}</td>
+                        <td>
+                            <span class="status-pill ${v.estado_activo ? 'active' : 'inactive'}">
+                                ${v.estado_activo ? 'Activo' : 'Suspendido'}
+                            </span>
+                        </td>
+                        <td style="color: var(--text-muted); font-size: 0.85rem;">
+                            ${v.ultimo_acceso ? new Date(v.ultimo_acceso).toLocaleString() : 'Nunca'}
+                        </td>
+                        <td>
+                            <button class="btn btn-action" onclick="toggleEstado('${v.id}', ${v.estado_activo})">
+                                ${v.estado_activo ? 'Suspender' : 'Activar'}
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
             }
-            listarDependientes();
         }
-        async function crearDependiente(){
-            const email = document.getElementById('dep-email').value.trim(); const password = document.getElementById('dep-password').value.trim(); const btn = document.getElementById('btnCrear');
-            ocultarAlerta(); if(!email||!password) return mostrarAlerta('Completa todos los campos.','error'); if(password.length<6) return mostrarAlerta('La contraseña debe tener al menos 6 caracteres.','error');
-            btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Creando...';
-            try{
-                const { data: sessionActual } = await sb.auth.getSession();
-                const { data: authData, error: authError } = await sb.auth.signUp({ email, password });
-                if(authError) throw new Error(authError.message);
-                if(!authData.user) throw new Error('El correo ya puede estar registrado.');
-                const { error: perfError } = await sb.from('perfiles').insert([{ id: authData.user.id, email, rol: 'dependiente', admin_id: adminId, estado_activo: true, eliminado: false, vencimiento: adminVencimiento }]);
-                if(perfError) throw new Error('Error al guardar perfil: '+perfError.message);
-                if(sessionActual?.session) await sb.auth.setSession({ access_token: sessionActual.session.access_token, refresh_token: sessionActual.session.refresh_token });
-                document.getElementById('dep-email').value=''; document.getElementById('dep-password').value='';
-                mostrarAlerta('Vendedor creado correctamente.','success');
-                listarDependientes();
-            }catch(err){ mostrarAlerta(err.message,'error'); }
-            finally{ btn.disabled=false; btn.innerHTML='<i class="fas fa-user-plus"></i> Crear Cuenta del Vendedor'; }
+
+        async function crearVendedor() {
+            const email = document.getElementById('dep_email').value;
+            const password = document.getElementById('dep_pass').value;
+
+            if (!email || !password) return alert("Completa los datos.");
+
+            // 1. Registro en Auth (El Admin lo registra)
+            const { data, error } = await sb.auth.signUp({ email, password });
+
+            if (error) {
+                alert("Error: " + error.message);
+                return;
+            }
+
+            // 2. Crear perfil vinculado
+            const { error: pError } = await sb.from('perfiles').insert([{
+                id: data.user.id,
+                email: email,
+                rol: 'dependiente',
+                admin_id: currentUser.id,
+                estado_activo: true
+            }]);
+
+            if (pError) alert("Error perfil: " + pError.message);
+            else {
+                alert("Vendedor registrado con éxito.");
+                document.getElementById('dep_email').value = '';
+                document.getElementById('dep_pass').value = '';
+                listarVendedores();
+            }
         }
-        async function listarDependientes(){
-            const { data } = await sb.from('perfiles').select('*').eq('admin_id', adminId).eq('rol','dependiente').order('email');
-            const tabla = document.getElementById('tabla-dependientes');
-            if(!data || data.length===0){ tabla.innerHTML='<tr><td colspan="3">No hay vendedores registrados.</td></tr>'; return; }
-            tabla.innerHTML = data.map(dep => {
-                const activo = dep.estado_activo !== false && !dep.eliminado;
-                return `<tr style="${dep.eliminado?'opacity:0.5;':''}">
-                    <td>${dep.email||'—'}</td>
-                    <td><span class="badge ${activo?'badge-active':'badge-inactive'}">${activo?'Activo':'Inactivo'}</span></td>
-                    <td style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        ${dep.eliminado ? `<button class="btn-success" onclick="toggleEstado('${dep.id}', true)"><i class="fas fa-undo"></i> Restaurar</button>`
-                        : `<button class="${activo?'btn-danger':'btn-success'}" onclick="toggleEstado('${dep.id}', ${!activo})">${activo?'<i class="fas fa-lock"></i> Desactivar':'<i class="fas fa-unlock"></i> Activar'}</button>
-                           <button class="btn-danger" onclick="eliminarDependiente('${dep.id}')"><i class="fas fa-trash"></i> Eliminar</button>`}
-                    </td>
-                </tr>`;
-            }).join('');
+
+        async function toggleEstado(id, actual) {
+            const { error } = await sb
+                .from('perfiles')
+                .update({ estado_activo: !actual })
+                .eq('id', id);
+            
+            if (!error) listarVendedores();
         }
-        async function toggleEstado(id, nuevoEstado){ await sb.from('perfiles').update({ estado_activo: nuevoEstado }).eq('id',id); listarDependientes(); }
-        async function eliminarDependiente(id){ if(confirm('Eliminar este vendedor?')){ await sb.from('perfiles').update({ eliminado: true, estado_activo: false }).eq('id',id); listarDependientes(); } }
-        async function cerrarSesion(){ await sb.auth.signOut(); window.location.href='index.html'; }
-        function mostrarAlerta(msg, tipo){ const el = document.getElementById('alert-msg'); el.innerHTML=msg; el.className=`alert alert-${tipo==='error'?'error':'success'}`; el.style.display='block'; }
-        function ocultarAlerta(){ document.getElementById('alert-msg').style.display='none'; }
-        const toggleBtn = document.getElementById('menuToggle'), sidebar = document.getElementById('sidebar');
-        toggleBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
-        document.addEventListener('click', (e) => { if(window.innerWidth<=768 && !sidebar.contains(e.target) && !toggleBtn.contains(e.target) && sidebar.classList.contains('open')) sidebar.classList.remove('open'); });
+
+        async function cerrarSesion() {
+            await sb.auth.signOut();
+            window.location.href = 'index.html';
+        }
+
         init();
     </script>
 </body>
