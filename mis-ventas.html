@@ -2,164 +2,195 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Mis Ventas | Nostalgia Cubana</title>
-    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
     <style>
-        :root {
-            --primary: #3b82f6;
-            --success: #10b981;
-            --danger: #ef4444;
-            --dark: #0f172a;
-            --card: #1e293b;
-            --border: #334155;
-            --text-muted: #94a3b8;
-        }
-
+        :root { --primary: #2563eb; --dark: #0f172a; --card: #1e293b; --success: #10b981; --danger: #ef4444; --text-muted: #94a3b8; --border: #334155; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', sans-serif; background: var(--dark); color: white; display: flex; height: 100vh; }
-
-        /* Sidebar */
-        .sidebar { width: 260px; background: var(--card); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-        .sidebar-header { padding: 30px 20px; text-align: center; }
-        .nav-links { flex: 1; padding: 10px; }
-        .nav-links a {
-            display: flex; align-items: center; padding: 12px 15px; color: var(--text-muted);
-            text-decoration: none; border-radius: 10px; margin-bottom: 5px;
+        body { font-family: 'Inter', sans-serif; background-color: var(--dark); color: white; }
+        .sidebar { width: 260px; background: var(--card); height: 100vh; position: fixed; border-right: 1px solid var(--border); padding: 30px 20px; transition: transform 0.3s; z-index: 100; overflow-y: auto; }
+        .main-content { margin-left: 260px; padding: 40px; transition: margin 0.3s; }
+        .nav-link { display: block; padding: 12px 15px; color: var(--text-muted); text-decoration: none; border-radius: 8px; margin-bottom: 10px; }
+        .nav-link:hover, .nav-link.active { background: rgba(37,99,235,0.1); color: var(--primary); }
+        .btn-logout { margin-top: 50px; color: var(--danger); cursor: pointer; border: 1px solid var(--danger); padding: 10px; text-align: center; border-radius: 8px; }
+        .vencimiento-badge { font-size: 0.72rem; padding: 4px 10px; border-radius: 20px; font-weight: 600; display: inline-block; margin-top: 10px; }
+        .vence-ok { background: rgba(16,185,129,0.15); color: var(--success); }
+        .vence-pronto { background: rgba(245,158,11,0.15); color: #f59e0b; }
+        .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 20px; }
+        .filter-group { flex: 1; min-width: 130px; }
+        label { color: var(--text-muted); font-size: 0.8rem; }
+        input, button { background: #0f172a; border: 1px solid var(--border); color: white; padding: 8px; border-radius: 8px; }
+        button { background: var(--primary); cursor: pointer; font-weight: 600; }
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 750px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--text-muted); font-weight: 600; }
+        .delete-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1.1rem; margin-left: 8px; }
+        .menu-toggle { display: none; position: fixed; top: 15px; left: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; padding: 10px 15px; z-index: 101; cursor: pointer; }
+        @media (max-width: 768px) {
+            .menu-toggle { display: block; }
+            .sidebar { transform: translateX(-100%); width: 80%; max-width: 280px; }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; padding: 60px 15px 20px; }
         }
-        .nav-links a:hover, .nav-links a.active { background: rgba(59, 130, 246, 0.1); color: white; }
-        .nav-links i { width: 25px; margin-right: 10px; }
-
-        /* Contenido Principal */
-        .main-content { flex: 1; overflow-y: auto; padding: 30px; }
-        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-
-        .table-container { background: var(--card); border-radius: 15px; border: 1px solid var(--border); overflow: hidden; }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: rgba(255,255,255,0.03); padding: 15px 20px; text-align: left; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; }
-        td { padding: 15px 20px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-
-        .btn-anular { 
-            background: rgba(239, 68, 68, 0.1); color: var(--danger); 
-            border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;
-        }
-        .btn-anular:hover { background: var(--danger); color: white; }
-        
-        .venta-eliminada { text-decoration: line-through; opacity: 0.5; }
     </style>
 </head>
 <body>
+    <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+    <div class="sidebar" id="sidebar">
+        <h2 style="color: var(--primary);">Nostalgia Cubana</h2>
+        <div id="vencimiento-info"></div>
+        <nav>
+            <a href="caja.html" class="nav-link"><i class="fas fa-cash-register"></i> Caja</a>
+            <a href="mis-ventas.html" class="nav-link active"><i class="fas fa-chart-line"></i> Ventas Realizadas</a>
+            <a href="mis-turnos.html" class="nav-link"><i class="fas fa-clipboard-list"></i> CUADRE</a>
+        </nav>
+        <div class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</div>
+    </div>
 
-    <nav class="sidebar">
-        <div class="sidebar-header"><h3>Nostalgia POS</h3></div>
-        <div class="nav-links">
-            <a href="caja.html"><i class="fas fa-cash-register"></i> Nueva Venta</a>
-            <a href="#" class="active"><i class="fas fa-history"></i> Mis Ventas</a>
-            <a href="mis-turnos.html"><i class="fas fa-clock"></i> Mis Turnos</a>
-            <a href="#" onclick="cerrarSesion()"><i class="fas fa-sign-out-alt"></i> Salir</a>
+    <div class="main-content">
+        <h1><i class="fas fa-chart-line"></i> Mis Ventas</h1>
+        <div class="filter-bar">
+            <div class="filter-group"><label>Desde</label><input type="date" id="desde"></div>
+            <div class="filter-group"><label>Hasta</label><input type="date" id="hasta"></div>
+            <div class="filter-group"><button id="filtrarBtn">Filtrar</button></div>
         </div>
-    </nav>
-
-    <main class="main-content">
-        <div class="header-flex">
-            <h1>Mis Ventas del Día</h1>
-            <div id="resumenVentas" style="font-weight: 600; color: var(--success);">Total: $0.00</div>
-        </div>
-
         <div class="table-container">
-            <table>
+            <table id="tablaVentas">
                 <thead>
-                    <tr>
-                        <th>Hora</th>
-                        <th>Producto</th>
-                        <th>Cant.</th>
-                        <th>Total</th>
-                        <th>Acción</th>
-                    </tr>
+                    <tr><th>Fecha y Hora</th><th>Producto</th><th>Cantidad</th><th>Precio/U</th><th>Precio Total</th><th>Acciones</th></tr>
                 </thead>
-                <tbody id="ventasBody">
-                    </tbody>
+                <tbody><tr><td colspan="6">Cargando...</tbody>
+                <tfoot id="tablaFooter" style="display: none;"><tr><td colspan="4"><strong>TOTAL GENERAL</strong><td id="footerTotal">$0</tr></tfoot>
             </table>
         </div>
-    </main>
+    </div>
 
     <script>
         const sb = window.supabaseInstance;
         let currentUser = null;
 
-        async function init() {
-            const access = await validarAccesoGlobal();
-            if (!access) return;
-            currentUser = access.user;
-            await cargarVentas();
+        function getLocalDateRange(fechaInicio, fechaFin) {
+            if (!fechaInicio || !fechaFin) return { start: null, end: null };
+            const start = new Date(fechaInicio + 'T00:00:00');
+            const end = new Date(fechaFin + 'T23:59:59');
+            return { start: start.toISOString(), end: end.toISOString() };
         }
 
         async function cargarVentas() {
-            // Obtenemos solo las ventas del usuario actual hoy
-            const hoy = new Date().toISOString().split('T')[0];
+            const desde = document.getElementById('desde').value;
+            const hasta = document.getElementById('hasta').value;
+            const tbody = document.querySelector('#tablaVentas tbody');
+            const footer = document.getElementById('tablaFooter');
+            try {
+                tbody.innerHTML = '<tr><td colspan="6">Cargando...</td></tr>';
+                footer.style.display = 'none';
 
-            const { data, error } = await sb
-                .from('ventas')
-                .select(`
-                    *,
-                    productos:producto_id(nombre)
-                `)
-                .eq('vendedor_id', currentUser.id)
-                .gte('created_at', hoy)
-                .order('created_at', { ascending: false });
+                let query = sb.from('ventas').select('*').eq('vendedor_id', currentUser.id).eq('eliminada', false).order('created_at', { ascending: false });
+                if (desde && hasta) {
+                    const { start, end } = getLocalDateRange(desde, hasta);
+                    query = query.gte('created_at', start).lte('created_at', end);
+                }
+                const { data: ventas, error } = await query;
+                if (error) throw error;
 
-            if (error) return console.error(error);
-            renderVentas(data);
+                if (!ventas || ventas.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6">No hay ventas en el período.</td></tr>';
+                    return;
+                }
+
+                const productoIds = [...new Set(ventas.map(v => v.producto_id).filter(id => id))];
+                let productosMap = new Map();
+                if (productoIds.length) {
+                    const { data: prods } = await sb.from('productos').select('id, nombre').in('id', productoIds);
+                    if (prods) prods.forEach(p => productosMap.set(p.id, p.nombre));
+                }
+
+                tbody.innerHTML = '';
+                let totalVentas = 0;
+
+                for (const v of ventas) {
+                    const producto = productosMap.get(v.producto_id) || 'Producto eliminado';
+                    const cantidad = v.cantidad || 1;
+                    const precioTotal = v.precio_total || 0;
+                    const precioUnitario = cantidad ? precioTotal / cantidad : 0;
+                    totalVentas += precioTotal;
+                    const fechaHora = new Date(v.created_at).toLocaleString();
+
+                    const row = `
+                        <tr>
+                            <td>${window.escapeHtml(fechaHora)}</td>
+                            <td>${window.escapeHtml(producto)}</td>
+                            <td>${cantidad}</td>
+                            <td>$${precioUnitario.toFixed(2)}</td>
+                            <td>$${precioTotal.toFixed(2)}</td>
+                            <td>
+                                <button class="delete-btn" data-id="${v.id}" title="Eliminar venta"><i class="fas fa-trash-alt"></i></button>
+                             </td>
+                         </tr>
+                    `;
+                    tbody.innerHTML += row;
+                }
+
+                document.getElementById('footerTotal').innerHTML = `$${totalVentas.toFixed(2)}`;
+                footer.style.display = 'table-footer-group';
+
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        const id = btn.getAttribute('data-id');
+                        if (confirm('¿Eliminar esta venta? No aparecerá en reportes.')) {
+                            await eliminarVenta(id);
+                        }
+                    });
+                });
+            } catch (err) {
+                console.error(err);
+                tbody.innerHTML = `<tr><td colspan="6">Error: ${err.message}</td></tr>`;
+            }
         }
 
-        function renderVentas(ventas) {
-            const tbody = document.getElementById('ventasBody');
-            let totalAcumulado = 0;
-
-            tbody.innerHTML = ventas.map(v => {
-                if (!v.eliminada) totalAcumulado += v.precio_total;
-                
-                return `
-                    <tr class="${v.eliminada ? 'venta-eliminada' : ''}">
-                        <td>${new Date(v.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
-                        <td>${v.productos?.nombre || 'Producto eliminado'}</td>
-                        <td>${v.cantidad}</td>
-                        <td>$${v.precio_total.toFixed(2)}</td>
-                        <td>
-                            ${!v.eliminada ? `<button class="btn-anular" onclick="anularVenta(${v.id}, ${v.producto_id}, ${v.cantidad})">Anular</button>` : 'Anulada'}
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-
-            document.getElementById('resumenVentas').innerText = `Total: $${totalAcumulado.toFixed(2)}`;
+        async function eliminarVenta(id) {
+            try {
+                const { error } = await sb.from('ventas').update({ eliminada: true }).eq('id', id);
+                if (error) throw error;
+                alert('Venta eliminada correctamente.');
+                await cargarVentas();
+            } catch (err) {
+                alert('Error al eliminar: ' + err.message);
+            }
         }
 
-        async function anularVenta(id, productoId, cantidad) {
-            if (!confirm("¿Seguro que deseas anular esta venta? El stock será devuelto al inventario.")) return;
+        document.addEventListener('DOMContentLoaded', async () => {
+            const perfil = await window.validarAccesoGlobal(['dependiente', 'admin']);
+            if (!perfil) return;
+            currentUser = perfil;
 
-            // 1. Marcar como eliminada
-            await sb.from('ventas').update({ eliminada: true }).eq('id', id);
+            if (perfil.vencimiento) {
+                const dias = Math.ceil((new Date(perfil.vencimiento) - new Date()) / 86400000);
+                const clase = dias <= 7 ? 'vence-pronto' : 'vence-ok';
+                const texto = dias <= 0 ? 'Suscripción vencida' : `Vence en ${dias} días`;
+                document.getElementById('vencimiento-info').innerHTML = `<span class="vencimiento-badge ${clase}">${texto}</span>`;
+            }
 
-            // 2. Devolver stock (Obtener stock actual primero)
-            const { data: prod } = await sb.from('productos').select('stock').eq('id', productoId).single();
-            await sb.from('productos').update({ stock: prod.stock + cantidad }).eq('id', productoId);
+            const hoy = new Date();
+            const hace30 = new Date();
+            hace30.setDate(hoy.getDate() - 30);
+            document.getElementById('desde').value = hace30.toISOString().split('T')[0];
+            document.getElementById('hasta').value = hoy.toISOString().split('T')[0];
 
-            alert("Venta anulada correctamente");
-            cargarVentas();
-        }
+            document.getElementById('filtrarBtn').addEventListener('click', cargarVentas);
+            await cargarVentas();
+        });
 
-        async function cerrarSesion() {
-            await sb.auth.signOut();
-            window.location.href = 'index.html';
-        }
-
-        init();
+        // Sidebar toggle
+        const toggle = document.getElementById('menuToggle'), side = document.getElementById('sidebar');
+        if (toggle) toggle.addEventListener('click', () => side.classList.toggle('open'));
+        document.addEventListener('click', (e) => { if (window.innerWidth <= 768 && !side.contains(e.target) && !toggle.contains(e.target) && side.classList.contains('open')) side.classList.remove('open'); });
     </script>
 </body>
 </html>
