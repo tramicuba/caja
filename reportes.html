@@ -2,126 +2,256 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Reportes de Ventas | Nostalgia Cubana</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reportes | Nostalgia Cubana</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
     <style>
-        :root { --primary: #2563eb; --dark: #0f172a; --card: #1e293b; --danger: #ef4444; --success: #10b981; --text-muted: #94a3b8; }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--dark); color: white; }
-        .sidebar { width: 260px; background: var(--card); height: 100vh; position: fixed; border-right: 1px solid #334155; padding: 30px 20px; transition: transform 0.3s; z-index: 100; overflow-y: auto; }
-        .main-content { margin-left: 260px; padding: 40px; transition: margin 0.3s; }
-        .nav-link { display: block; padding: 12px 15px; color: var(--text-muted); text-decoration: none; border-radius: 8px; margin-bottom: 10px; }
-        .nav-link:hover, .nav-link.active { background: rgba(37,99,235,0.1); color: var(--primary); }
-        .card { background: var(--card); border-radius: 12px; border: 1px solid #334155; padding: 20px; margin-bottom: 30px; }
-        .filter-bar { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 20px; }
-        .filter-group { flex: 1; min-width: 130px; }
-        label { display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 0.8rem; }
-        input, select { background: #0f172a; border: 1px solid #334155; color: white; padding: 10px; border-radius: 8px; width: 100%; }
-        button { background: var(--primary); border: none; padding: 10px 20px; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; }
-        .export-btn { background: var(--success); margin-left: 10px; }
-        .table-container { overflow-x: auto; margin-top: 20px; }
-        table { width: 100%; border-collapse: collapse; min-width: 800px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #334155; }
-        th { color: var(--text-muted); font-size: 0.8rem; }
-        .resumen { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
-        .resumen-card { background: #0f172a; padding: 15px; border-radius: 12px; flex: 1; text-align: center; border: 1px solid #334155; }
-        .btn-logout { margin-top: 50px; color: var(--danger); cursor: pointer; border: 1px solid var(--danger); padding: 10px; text-align: center; border-radius: 8px; }
-        .menu-toggle { display: none; position: fixed; top: 15px; left: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; padding: 10px 15px; z-index: 101; cursor: pointer; }
-        @media (max-width: 768px) {
-            .menu-toggle { display: block; }
-            .sidebar { transform: translateX(-100%); width: 80%; max-width: 280px; }
-            .sidebar.open { transform: translateX(0); }
-            .main-content { margin-left: 0; padding: 60px 15px 20px 15px; }
-            .filter-bar { flex-direction: column; align-items: stretch; }
-            .resumen { flex-direction: column; }
-            .export-btn { margin-left: 0; margin-top: 10px; }
+        :root {
+            --primary: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --card: #1e293b;
+            --border: #334155;
+            --text-muted: #94a3b8;
         }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--dark); color: white; display: flex; height: 100vh; }
+
+        /* Sidebar */
+        .sidebar { width: 260px; background: var(--card); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .sidebar-header { padding: 30px 20px; text-align: center; }
+        .nav-links { flex: 1; padding: 10px; }
+        .nav-links a {
+            display: flex; align-items: center; padding: 12px 15px; color: var(--text-muted);
+            text-decoration: none; border-radius: 10px; margin-bottom: 5px;
+        }
+        .nav-links a:hover, .nav-links a.active { background: rgba(59, 130, 246, 0.1); color: white; }
+        .nav-links i { width: 25px; margin-right: 10px; }
+
+        /* Main Content */
+        .main-content { flex: 1; overflow-y: auto; padding: 30px; }
+        
+        /* Filtros */
+        .filters-bar { 
+            background: var(--card); padding: 20px; border-radius: 15px; 
+            margin-bottom: 30px; display: flex; gap: 20px; align-items: flex-end;
+            border: 1px solid var(--border);
+        }
+        .filter-group { display: flex; flex-direction: column; gap: 8px; }
+        .filter-group label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
+        input[type="date"] {
+            padding: 10px; background: #0f172a; border: 1px solid var(--border);
+            border-radius: 8px; color: white; color-scheme: dark;
+        }
+
+        /* Resumen Cards */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { 
+            background: var(--card); padding: 25px; border-radius: 20px; 
+            border: 1px solid var(--border); position: relative; overflow: hidden;
+        }
+        .stat-card h3 { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 10px; }
+        .stat-card .value { font-size: 1.8rem; font-weight: 700; }
+        .stat-card i { position: absolute; right: 20px; top: 20px; font-size: 1.5rem; opacity: 0.2; }
+
+        /* Tabla */
+        .table-container { background: var(--card); border-radius: 20px; border: 1px solid var(--border); overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: rgba(255,255,255,0.03); padding: 15px 20px; text-align: left; color: var(--text-muted); font-size: 0.8rem; }
+        td { padding: 15px 20px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+
+        .btn { padding: 10px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; transition: 0.3s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-export { background: transparent; border: 1px solid var(--border); color: white; }
+        .btn-export:hover { background: var(--border); }
+
     </style>
 </head>
 <body>
-    <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
-    <div class="sidebar" id="sidebar">
-        <h2 style="color: var(--primary); margin-bottom: 5px;">Nostalgia Cubana</h2>
-        <div id="vencimiento-info" style="margin-bottom: 25px;"></div>
-        <nav>
-            <a href="admin.html" class="nav-link"><i class="fas fa-home"></i> Inicio</a>
-            <a href="gestion-stock.html" class="nav-link"><i class="fas fa-box"></i> Inventario</a>
-            <a href="reportes.html" class="nav-link active"><i class="fas fa-chart-bar"></i> Reportes de Ventas</a>
-            <a href="cuadre-admin.html" class="nav-link"><i class="fas fa-clipboard-list"></i> Cuadre Administrador</a>
-            <a href="gestion-dependientes.html" class="nav-link"><i class="fas fa-users"></i> Dependientes</a>
-        </nav>
-        <div class="btn-logout" onclick="cerrarSesion()">Cerrar Sesi&oacute;n</div>
-    </div>
 
-    <div class="main-content">
-        <h1>Reportes de Ventas</h1>
-        <div class="card">
-            <div class="filter-bar">
-                <div class="filter-group"><label for="fechaInicio">Desde</label><input type="date" id="fechaInicio"></div>
-                <div class="filter-group"><label for="fechaFin">Hasta</label><input type="date" id="fechaFin"></div>
-                <div class="filter-group"><label for="vendedorFilter">Vendedor</label><select id="vendedorFilter"><option value="todos">Todos</option></select></div>
-                <div class="filter-group"><button id="filtrarBtn"><i class="fas fa-search"></i> Filtrar</button><button id="exportBtn" class="export-btn"><i class="fas fa-file-excel"></i> Exportar CSV</button></div>
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <h3>Finanzas</h3>
+        </div>
+        <div class="nav-links">
+            <a href="admin.html"><i class="fas fa-chart-line"></i> Dashboard</a>
+            <a href="gestion-stock.html"><i class="fas fa-cubes"></i> Productos</a>
+            <a href="gestion-dependientes.html"><i class="fas fa-users"></i> Vendedores</a>
+            <a href="#" class="active"><i class="fas fa-file-invoice-dollar"></i> Reportes</a>
+            <a href="#" onclick="cerrarSesion()"><i class="fas fa-sign-out-alt"></i> Salir</a>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <h1>Análisis de Ventas</h1>
+            <button class="btn btn-export" onclick="exportarCSV()">
+                <i class="fas fa-download"></i> Exportar CSV
+            </button>
+        </div>
+
+        <div class="filters-bar">
+            <div class="filter-group">
+                <label>Desde</label>
+                <input type="date" id="fecha_inicio">
+            </div>
+            <div class="filter-group">
+                <label>Hasta</label>
+                <input type="date" id="fecha_fin">
+            </div>
+            <button class="btn btn-primary" onclick="cargarReporte()">
+                <i class="fas fa-sync-alt"></i> Filtrar
+            </button>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Venta Bruta</h3>
+                <div class="value" id="total_venta">$0.00</div>
+                <i class="fas fa-cash-register"></i>
+            </div>
+            <div class="stat-card">
+                <h3>Costo de Inversión</h3>
+                <div class="value" id="total_costo" style="color: var(--danger)">$0.00</div>
+                <i class="fas fa-shuttle-van"></i>
+            </div>
+            <div class="stat-card">
+                <h3>Ganancia Neta</h3>
+                <div class="value" id="total_ganancia" style="color: var(--success)">$0.00</div>
+                <i class="fas fa-hand-holding-usd"></i>
             </div>
         </div>
-        <div class="resumen">
-            <div class="resumen-card"><h4>Total Ventas</h4><div id="totalVentas">$0</div></div>
-            <div class="resumen-card"><h4>Ganancia Neta</h4><div id="totalGanancia" style="color:var(--success);">$0</div></div>
-            <div class="resumen-card"><h4>Transacciones</h4><div id="totalTransacciones">0</div></div>
-            <div class="resumen-card"><h4>Productos Vendidos</h4><div id="totalUnidades">0</div></div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha y Hora</th>
+                        <th>Producto</th>
+                        <th>Cant.</th>
+                        <th>Venta</th>
+                        <th>Costo</th>
+                        <th>Ganancia</th>
+                        <th>Vendedor</th>
+                    </tr>
+                </thead>
+                <tbody id="reporteBody">
+                    </tbody>
+            </table>
         </div>
-        <div class="card">
-            <div class="table-container">
-                <table id="tablaReportes">
-                    <thead><tr><th>Fecha y Hora</th><th>Producto</th><th>Cantidad</th><th>Precio Total</th><th>Costo Unitario</th><th>Ganancia</th><th>Vendedor</th></tr></thead>
-                    <tbody><tr><td colspan="7">Selecciona un rango...</td></tr></tbody>
-                    <tfoot id="tablaFooter" style="display: none;"><tr><td colspan="3"><strong>TOTALES</strong></td><td id="footerTotalVentas">$0</td><td></td><td id="footerTotalGanancia">$0</td><td></td></tr></tfoot>
-                </table>
-            </div>
-        </div>
-    </div>
+    </main>
 
     <script>
-        const sb = window.supabaseInstance; let ownerIdGlobal = null, vendedoresMap = new Map(), currentProfile = null, currentVentasData = [];
-        function getLocalDateRange(fechaInicio, fechaFin) { if (!fechaInicio || !fechaFin) return { start: null, end: null }; const start = new Date(fechaInicio + 'T00:00:00'); const end = new Date(fechaFin + 'T23:59:59'); return { start: start.toISOString(), end: end.toISOString() }; }
-        function formatearFechaHora(isoString) { if (!isoString) return ''; const f = new Date(isoString); return `${f.getDate().toString().padStart(2,'0')}/${(f.getMonth()+1).toString().padStart(2,'0')}/${f.getFullYear()} ${f.getHours().toString().padStart(2,'0')}:${f.getMinutes().toString().padStart(2,'0')}:${f.getSeconds().toString().padStart(2,'0')}`; }
+        const sb = window.supabaseInstance;
+        let currentUser = null;
+        let currentVentas = [];
+
         async function init() {
-            const perfil = await validarAccesoGlobal(); if (!perfil || perfil.rol !== 'admin') { window.location.href = 'index.html'; return; }
-            currentProfile = perfil; ownerIdGlobal = perfil.id;
-            const { data: vendedores } = await sb.from('perfiles').select('id,email').eq('admin_id', ownerIdGlobal).eq('rol','dependiente');
-            const select = document.getElementById('vendedorFilter'); select.innerHTML = '<option value="todos">Todos</option>';
-            if(vendedores) vendedores.forEach(v => { vendedoresMap.set(v.id, v.email); select.innerHTML += `<option value="${v.id}">${v.email}</option>`; });
-            const hoy = new Date(); const hace7 = new Date(); hace7.setDate(hoy.getDate()-7);
-            document.getElementById('fechaInicio').value = hace7.toISOString().split('T')[0]; document.getElementById('fechaFin').value = hoy.toISOString().split('T')[0];
-            document.getElementById('filtrarBtn').addEventListener('click', cargarReportes); document.getElementById('exportBtn').addEventListener('click', exportarCSV); cargarReportes();
+            const access = await validarAccesoGlobal();
+            if (!access) return;
+            currentUser = access.user;
+
+            // Establecer fechas por defecto (Hoy)
+            const hoy = new Date().toISOString().split('T')[0];
+            document.getElementById('fecha_inicio').value = hoy;
+            document.getElementById('fecha_fin').value = hoy;
+
+            await cargarReporte();
         }
-        async function cargarReportes() {
-            let start = document.getElementById('fechaInicio').value, end = document.getElementById('fechaFin').value;
-            if (!start || !end) return;
-            const { start: startISO, end: endISO } = getLocalDateRange(start, end);
-            let query = sb.from('ventas').select('*').eq('owner_id', ownerIdGlobal).eq('eliminada', false).gte('created_at', startISO).lte('created_at', endISO).order('created_at',{ascending:false});
-            const vendedorId = document.getElementById('vendedorFilter').value;
-            if(vendedorId !== 'todos') query = query.eq('vendedor_id', vendedorId);
-            const { data: ventas } = await query;
-            let productosIds = [...new Set(ventas?.map(v=>v.producto_id).filter(id=>id)||[])];
-            let productosMap = new Map();
-            if(productosIds.length){ const {data: prods} = await sb.from('productos').select('id,nombre').in('id',productosIds); if(prods) prods.forEach(p=>productosMap.set(p.id, p.nombre)); }
-            currentVentasData = []; let totalVentasSum = 0, totalGananciaSum = 0, totalUnidadesSum = 0;
-            if(ventas) ventas.forEach(v => { const prod = productosMap.get(v.producto_id)||'Producto eliminado'; const cant = v.cantidad||1, pt = v.precio_total||0, cu = v.precio_compra_momento||0, gan = pt - (cu*cant); totalVentasSum+=pt; totalGananciaSum+=gan; totalUnidadesSum+=cant; currentVentasData.push({ fechaHora: formatearFechaHora(v.created_at), producto: prod, cantidad: cant, precioTotal: pt, costoUnitario: cu, ganancia: gan, vendedor: vendedoresMap.get(v.vendedor_id)||'Vendedor' }); });
-            const tbody = document.querySelector('#tablaReportes tbody'); tbody.innerHTML = '';
-            if(!ventas || ventas.length===0) { tbody.innerHTML='<tr><td colspan="7">No hay ventas</td></tr>'; document.getElementById('tablaFooter').style.display = 'none'; return; }
-            currentVentasData.forEach(row => tbody.innerHTML += `<tr><td>${row.fechaHora}</td><td>${escapeHtml(row.producto)}</td><td>${row.cantidad}</td><td>$${row.precioTotal.toFixed(2)}</td><td>$${row.costoUnitario.toFixed(2)}</td><td style="color:var(--success);">$${row.ganancia.toFixed(2)}</td><td>${row.vendedor}</td></tr>`);
-            document.getElementById('footerTotalVentas').innerHTML = `$${totalVentasSum.toFixed(2)}`; document.getElementById('footerTotalGanancia').innerHTML = `$${totalGananciaSum.toFixed(2)}`; document.getElementById('tablaFooter').style.display = 'table-footer-group';
-            document.getElementById('totalVentas').innerHTML = `$${totalVentasSum.toFixed(2)}`; document.getElementById('totalGanancia').innerHTML = `$${totalGananciaSum.toFixed(2)}`; document.getElementById('totalTransacciones').innerHTML = ventas.length; document.getElementById('totalUnidades').innerHTML = totalUnidadesSum;
+
+        async function cargarReporte() {
+            const inicio = document.getElementById('fecha_inicio').value;
+            const fin = document.getElementById('fecha_fin').value;
+
+            // Consultar ventas con los datos del producto (para el costo)
+            const { data, error } = await sb
+                .from('ventas')
+                .select(`
+                    id, created_at, cantidad, precio_total, 
+                    perfiles:vendedor_id(email),
+                    productos:producto_id(nombre, precio_compra)
+                `)
+                .eq('owner_id', currentUser.id)
+                .eq('eliminada', false)
+                .gte('created_at', inicio + 'T00:00:00')
+                .lte('created_at', fin + 'T23:59:59')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error(error);
+                return;
+            }
+
+            currentVentas = data;
+            renderizarReporte();
         }
-        function exportarCSV() { if (!currentVentasData.length) return alert('No hay datos'); const sep = ';'; let csv = `Fecha y Hora${sep}Producto${sep}Cantidad${sep}Precio Total${sep}Costo Unitario${sep}Ganancia${sep}Vendedor\n`; let totalV=0, totalG=0; currentVentasData.forEach(r=>{ let prod = r.producto; if(prod.includes(sep)||prod.includes('"')) prod = `"${prod.replace(/"/g,'""')}"`; csv += `${r.fechaHora}${sep}${prod}${sep}${r.cantidad}${sep}${r.precioTotal.toFixed(2)}${sep}${r.costoUnitario.toFixed(2)}${sep}${r.ganancia.toFixed(2)}${sep}${r.vendedor}\n`; totalV+=r.precioTotal; totalG+=r.ganancia; }); csv += `TOTALES${sep}${sep}${sep}${totalV.toFixed(2)}${sep}${sep}${totalG.toFixed(2)}\n`; const blob = new Blob(["\uFEFF"+csv],{type:'text/csv;charset=utf-8'}); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `reporte_ventas_${new Date().toISOString().slice(0,10)}.csv`; link.click(); URL.revokeObjectURL(link.href); }
-        function escapeHtml(s) { return s ? s.replace(/[&<>]/g, m=> m==='&'?'&amp;': m==='<'?'&lt;':'&gt;') : ''; }
-        async function cerrarSesion() { await sb.auth.signOut(); window.location.href = 'index.html'; }
-        const toggleBtn = document.getElementById('menuToggle'), sidebar = document.getElementById('sidebar');
-        toggleBtn.addEventListener('click', () => sidebar.classList.toggle('open')); document.addEventListener('click', (e) => { if(window.innerWidth<=768 && !sidebar.contains(e.target) && !toggleBtn.contains(e.target) && sidebar.classList.contains('open')) sidebar.classList.remove('open'); });
+
+        function renderizarReporte() {
+            let totalVenta = 0;
+            let totalCosto = 0;
+            let totalGanancia = 0;
+
+            const tbody = document.getElementById('reporteBody');
+            tbody.innerHTML = currentVentas.map(v => {
+                const costoUnitario = v.productos?.precio_compra || 0;
+                const costoTotal = costoUnitario * v.cantidad;
+                const ganancia = v.precio_total - costoTotal;
+
+                totalVenta += v.precio_total;
+                totalCosto += costoTotal;
+                totalGanancia += ganancia;
+
+                return `
+                    <tr>
+                        <td style="color: var(--text-muted)">${new Date(v.created_at).toLocaleString()}</td>
+                        <td><strong>${v.productos?.nombre || 'Desconocido'}</strong></td>
+                        <td>${v.cantidad}</td>
+                        <td>$${v.precio_total.toFixed(2)}</td>
+                        <td style="color: var(--danger)">$${costoTotal.toFixed(2)}</td>
+                        <td style="color: var(--success); font-weight: 600;">$${ganancia.toFixed(2)}</td>
+                        <td style="font-size: 0.8rem;">${v.perfiles?.email.split('@')[0]}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('total_venta').innerText = `$${totalVenta.toFixed(2)}`;
+            document.getElementById('total_costo').innerText = `$${totalCosto.toFixed(2)}`;
+            document.getElementById('total_ganancia').innerText = `$${totalGanancia.toFixed(2)}`;
+        }
+
+        function exportarCSV() {
+            if (currentVentas.length === 0) return alert("No hay datos para exportar.");
+            
+            let csv = "Fecha;Producto;Cantidad;Venta;Costo;Ganancia;Vendedor\n";
+            currentVentas.forEach(v => {
+                const costoTotal = (v.productos?.precio_compra || 0) * v.cantidad;
+                const ganancia = v.precio_total - costoTotal;
+                csv += `${new Date(v.created_at).toLocaleString()};${v.productos?.nombre};${v.cantidad};${v.precio_total};${costoTotal};${ganancia};${v.perfiles?.email}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('hidden', '');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `Reporte_${new Date().toLocaleDateString()}.csv`);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        async function cerrarSesion() {
+            await sb.auth.signOut();
+            window.location.href = 'index.html';
+        }
+
         init();
     </script>
 </body>
