@@ -3,208 +3,265 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Acceso Super Admin | Nostalgia Cubana</title>
+    <title>Acceso Maestro | Nostalgia Cubana</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
     <script src="config-auth.js"></script>
+
     <style>
-        :root { --primary: #3b82f6; --dark: #0f172a; --error: #ef4444; --success: #10b981; }
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --dark: #0f172a;
+            --card: #1e293b;
+            --error: #ef4444;
+            --text-muted: #94a3b8;
+            --border: #334155;
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
             font-family: 'Inter', sans-serif;
             background: var(--dark);
             color: white;
             display: flex;
             height: 100vh;
-            margin: 0;
             align-items: center;
             justify-content: center;
             padding: 20px;
+            overflow: hidden;
         }
+
         .login-card {
-            background: #1e293b;
+            background: var(--card);
             padding: 40px;
-            border-radius: 20px;
+            border-radius: 24px;
             box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
             width: 100%;
-            max-width: 380px;
-        }
-        h2 {
+            max-width: 400px;
+            border: 1px solid var(--border);
             text-align: center;
-            margin-bottom: 10px;
-            font-weight: 300;
-            letter-spacing: 1px;
+            animation: fadeIn 0.5s ease-out;
         }
-        .sub {
-            text-align: center;
-            font-size: 0.8rem;
-            color: #94a3b8;
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo-area {
             margin-bottom: 30px;
         }
-        .input-group { margin-bottom: 20px; position: relative; }
-        label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: #94a3b8; }
+
+        .logo-area i {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+            padding-left: 4px;
+        }
+
         input {
             width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #334155;
-            background: #0f172a;
+            padding: 12px 16px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 12px;
             color: white;
-            box-sizing: border-box;
+            font-size: 1rem;
+            transition: all 0.3s;
         }
-        button {
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        .btn-login {
             width: 100%;
             padding: 14px;
             background: var(--primary);
-            border: none;
-            border-radius: 8px;
             color: white;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
-            margin-top: 10px;
-        }
-        button:hover { background: #2563eb; transform: translateY(-2px); }
-        .error-msg {
-            color: var(--error);
-            font-size: 0.8rem;
-            text-align: center;
-            margin-top: 15px;
-            display: none;
-            background: rgba(239,68,68,0.1);
-            padding: 10px;
-            border-radius: 5px;
-        }
-        .info {
-            text-align: center;
-            font-size: 0.7rem;
-            margin-top: 20px;
-            color: var(--text-muted);
-        }
-        .password-wrapper {
-            position: relative;
-        }
-        .password-wrapper input {
-            padding-right: 45px;
-        }
-        .toggle-password {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
             border: none;
-            color: #94a3b8;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
             cursor: pointer;
-            font-size: 1.2rem;
-            padding: 0;
+            transition: all 0.3s;
+            margin-top: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
+            gap: 10px;
         }
-        .toggle-password:hover { color: var(--primary); }
-        @media (max-width: 480px) {
-            .login-card { padding: 25px; }
+
+        .btn-login:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .error-msg {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            margin-top: 20px;
+            display: none;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 25px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: white;
         }
     </style>
 </head>
 <body>
-<div class="login-card">
-    <h2>🔐 Acceso Restringido</h2>
-    <div class="sub">Super Administrador</div>
-    <div class="input-group">
-        <label>Correo Electrónico</label>
-        <input type="email" id="email" placeholder="superadmin@ejemplo.com">
-    </div>
-    <div class="input-group">
-        <label>Contraseña</label>
-        <div class="password-wrapper">
-            <input type="password" id="password" placeholder="••••••••">
-            <button type="button" class="toggle-password" id="togglePasswordBtn" tabindex="-1">👁️</button>
+
+    <div class="login-card">
+        <div class="logo-area">
+            <i class="fas fa-user-shield"></i>
+            <h2>Super Admin</h2>
+            <p class="subtitle">Área Restringida - Nostalgia Cubana</p>
         </div>
+
+        <form id="artyLoginForm">
+            <div class="form-group">
+                <label>Correo Electrónico</label>
+                <input type="email" id="email" placeholder="admin@maestro.com" required>
+            </div>
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+            
+            <button type="submit" id="loginBtn" class="btn-login">
+                <span>Ingresar al Sistema</span>
+                <i class="fas fa-arrow-right"></i>
+            </button>
+        </form>
+
+        <div id="error" class="error-msg"></div>
+        
+        <a href="index.html" class="back-link">
+            <i class="fas fa-chevron-left"></i> Volver al inicio
+        </a>
     </div>
-    <button id="loginBtn">Iniciar Sesión</button>
-    <div id="error" class="error-msg"></div>
-    <div class="info">Acceso exclusivo para Super Administrador</div>
-</div>
 
-<script>
-    (function() {
-        const URL = 'https://pkwfqpnwnrcmbncwkwew.supabase.co';
-        const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrd2ZxcG53bnJjbWJuY3drd2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4NTAxODEsImV4cCI6MjA5MzQyNjE4MX0._8QVetaDX1buaLN6kKpQatH8hGas_VL-zCuyDk4B3s4';
-        if (!window.supabaseInstance) window.supabaseInstance = window.supabase.createClient(URL, KEY);
-    })();
+    <script>
+        const sb = window.supabaseInstance;
 
-    const sb = window.supabaseInstance;
-
-    // Verificar si ya hay una sesión activa con rol superadmin
-    async function checkExistingSession() {
-        const { data: { user } } = await sb.auth.getUser();
-        if (user) {
-            const { data: profile } = await sb.from('perfiles').select('rol').eq('id', user.id).single();
-            if (profile && profile.rol === 'superadmin') {
-                window.location.href = 'superadmin.html';
-                return true;
+        async function checkSession() {
+            const { data: { user } } = await sb.auth.getUser();
+            if (user) {
+                const { data: profile } = await sb
+                    .from('perfiles')
+                    .select('rol')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (profile?.rol === 'superadmin') {
+                    window.location.href = 'superadmin.html';
+                }
             }
         }
-        return false;
-    }
 
-    // Mostrar/ocultar contraseña
-    const toggleBtn = document.getElementById('togglePasswordBtn');
-    const passwordInput = document.getElementById('password');
-    if (toggleBtn) {
-        toggleBtn.addEventListener('click', function(e) {
+        document.getElementById('artyLoginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passwordInput.setAttribute('type', type);
-            this.textContent = type === 'password' ? '👁️' : '🙈';
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('error');
+            const btn = document.getElementById('loginBtn');
+
+            errorDiv.style.display = 'none';
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Autenticando...';
+
+            try {
+                const { data: authData, error: authError } = await sb.auth.signInWithPassword({ 
+                    email, 
+                    password 
+                });
+
+                if (authError) throw new Error("Acceso denegado. Verifique sus credenciales.");
+
+                const { data: profile, error: profileError } = await sb
+                    .from('perfiles')
+                    .select('rol, eliminado')
+                    .eq('id', authData.user.id)
+                    .single();
+
+                if (profileError || !profile) throw new Error("No se encontró el perfil de administrador.");
+                
+                if (profile.eliminado) {
+                    await sb.auth.signOut();
+                    throw new Error("Esta cuenta maestra ha sido desactivada.");
+                }
+
+                if (profile.rol !== 'superadmin') {
+                    await sb.auth.signOut();
+                    throw new Error("No tiene privilegios de Super Administrador.");
+                }
+
+                // Éxito
+                window.location.href = 'superadmin.html';
+
+            } catch (err) {
+                errorDiv.innerText = err.message;
+                errorDiv.style.display = 'block';
+                btn.disabled = false;
+                btn.innerHTML = '<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
+            }
         });
-    }
 
-    document.getElementById('loginBtn').addEventListener('click', async () => {
-        const email = document.getElementById('email').value.trim();
-        const password = document.getElementById('password').value;
-        const errorDiv = document.getElementById('error');
-        const btn = document.getElementById('loginBtn');
-
-        errorDiv.style.display = 'none';
-        btn.disabled = true;
-        btn.innerText = "Verificando...";
-
-        try {
-            const { data: authData, error: authError } = await sb.auth.signInWithPassword({ email, password });
-            if (authError) throw new Error("Credenciales inválidas.");
-
-            const { data: profile, error: profileError } = await sb
-                .from('perfiles')
-                .select('rol, eliminado')
-                .eq('id', authData.user.id)
-                .single();
-
-            if (profileError || !profile) throw new Error("Error al obtener perfil.");
-
-            if (profile.eliminado === true) {
-                await sb.auth.signOut();
-                throw new Error("Esta cuenta ha sido desactivada por el administrador.");
-            }
-
-            if (profile.rol !== 'superadmin') {
-                await sb.auth.signOut();
-                throw new Error("No tienes permisos de Super Administrador.");
-            }
-
-            // Redirigir al panel de super admin
-            window.location.href = 'superadmin.html';
-        } catch (err) {
-            errorDiv.innerText = err.message;
-            errorDiv.style.display = 'block';
-            btn.innerText = "Iniciar Sesión";
-            btn.disabled = false;
-        }
-    });
-
-    // Si ya está logueado como superadmin, redirigir directamente
-    checkExistingSession();
-</script>
+        // Verificar si ya hay una sesión activa al cargar
+        checkSession();
+    </script>
 </body>
 </html>
