@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Panel Administrativo | Nostalgia Cubana</title>
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* Estilos existentes (se mantienen) */
         :root { --primary: #2563eb; --dark: #0f172a; --card: #1e293b; --danger: #ef4444; --success: #10b981; --text-muted: #94a3b8; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Inter', sans-serif; background-color: var(--dark); color: white; }
@@ -28,6 +28,9 @@
         .vence-ok { background: rgba(16,185,129,0.15); color: var(--success); }
         .vence-pronto { background: rgba(245,158,11,0.15); color: #f59e0b; }
         .menu-toggle { display: none; position: fixed; top: 15px; left: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; padding: 10px 15px; z-index: 101; cursor: pointer; }
+        .status-bar { font-size: 0.7rem; padding: 4px 8px; border-radius: 20px; display: inline-block; background: #0f172a; }
+        .online { color: var(--success); }
+        .offline { color: var(--danger); }
         @media (max-width: 768px) {
             .menu-toggle { display: block; }
             .sidebar { transform: translateX(-100%); width: 80%; max-width: 280px; }
@@ -62,8 +65,9 @@
     <div class="main-content">
         <header style="display: flex; justify-content: space-between; align-items: center;">
             <h1>Bienvenido al Panel</h1>
-            <div id="user-display" style="color: var(--text-muted);">Cargando...</div>
+            <div id="connectionStatus" class="status-bar">🔄</div>
         </header>
+        <div id="user-display" style="color: var(--text-muted); margin-bottom: 20px;">Cargando...</div>
         <div class="stats-grid">
             <div class="stat-card">
                 <h3>Ventas del Día</h3>
@@ -83,6 +87,25 @@
     </div>
 
     <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW error:', err));
+            });
+        }
+        function updateConnectionStatus() {
+            const statusDiv = document.getElementById('connectionStatus');
+            if (navigator.onLine) {
+                statusDiv.innerHTML = '✅ En línea';
+                statusDiv.className = 'status-bar online';
+            } else {
+                statusDiv.innerHTML = '⚠️ Sin conexión';
+                statusDiv.className = 'status-bar offline';
+            }
+        }
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+        updateConnectionStatus();
+
         const sb = window.supabaseInstance;
         let profileGlobal = null;
 
@@ -95,6 +118,12 @@
         }
 
         async function cargarEstadisticas(ownerId) {
+            if (!navigator.onLine) {
+                document.getElementById('ventas-dia').innerText = '--';
+                document.getElementById('total-stock').innerText = '--';
+                document.getElementById('ganancia-total').innerText = '--';
+                return;
+            }
             const { start, end } = getTodayRange();
             const { data: ventas } = await sb.from('ventas').select('precio_total, precio_compra_momento, cantidad').eq('owner_id', ownerId).eq('eliminada', false).gte('created_at', start).lte('created_at', end);
             if (ventas) {
@@ -117,7 +146,7 @@
             if (!perfil) return;
             profileGlobal = perfil;
             document.getElementById('lockScreen').style.display = 'none';
-            document.getElementById('user-display').innerText = perfil.email;
+            document.getElementById('user-display').innerHTML = `<i class="fas fa-user-shield"></i> ${window.escapeHtml(perfil.email)}`;
             if (perfil.vencimiento) {
                 const dias = Math.ceil((new Date(perfil.vencimiento) - new Date()) / 86400000);
                 const clase = dias <= 7 ? 'vence-pronto' : 'vence-ok';
@@ -127,7 +156,6 @@
             await cargarEstadisticas(perfil.id);
         });
 
-        // Sidebar toggle
         const toggle = document.getElementById('menuToggle'), side = document.getElementById('sidebar');
         toggle.addEventListener('click', () => side.classList.toggle('open'));
         document.addEventListener('click', (e) => { if (window.innerWidth <= 768 && !side.contains(e.target) && !toggle.contains(e.target) && side.classList.contains('open')) side.classList.remove('open'); });
