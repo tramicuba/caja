@@ -1,7 +1,7 @@
 // config-auth.js
 (function() {
-    const URL_PROYECTO = 'https://pkwfqpnwnrcmbncwkwew.supabase.co';
-    const KEY_PROYECTO = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrd2ZxcG53bnJjbWJuY3drd2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4NTAxODEsImV4cCI6MjA5MzQyNjE4MX0._8QVetaDX1buaLN6kKpQatH8hGas_VL-zCuyDk4B3s4';
+    const URL_PROYECTO = 'https://bmmzvqfordvjgzkxzosu.supabase.co';
+    const KEY_PROYECTO = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtbXp2cWZvcmR2amd6a3h6b3N1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1MjAwODYsImV4cCI6MjA5NDA5NjA4Nn0.4mqHOHnoKamDBC78QY8A78bfGLL4GllvyHPLKrvBpAU';
 
     if (!window.supabaseInstance) {
         window.supabaseInstance = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO);
