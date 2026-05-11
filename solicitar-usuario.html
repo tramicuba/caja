@@ -11,8 +11,8 @@
             --primary: #3b82f6;
             --dark: #0f172a;
             --card: #1e293b;
-            --error: #ef4444;
             --success: #10b981;
+            --error: #ef4444;
             --text-muted: #94a3b8;
             --border: #334155;
         }
@@ -27,311 +27,118 @@
             justify-content: center;
             padding: 20px;
         }
-        .request-card {
+        .card {
             background: var(--card);
-            padding: 40px;
+            padding: 35px;
             border-radius: 24px;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
             width: 100%;
             max-width: 420px;
             border: 1px solid var(--border);
             text-align: center;
-            animation: fadeIn 0.5s ease-out;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .logo-area {
-            margin-bottom: 30px;
-        }
-        .logo-area i {
-            font-size: 3rem;
-            color: var(--primary);
-            margin-bottom: 15px;
-        }
-        h2 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-            letter-spacing: -0.5px;
-        }
-        p.subtitle {
-            color: var(--text-muted);
-            font-size: 0.875rem;
-            margin-bottom: 30px;
-        }
-        .form-group {
-            text-align: left;
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-            color: var(--text-muted);
-            padding-left: 4px;
-        }
+        .logo i { font-size: 3rem; color: var(--primary); margin-bottom: 15px; }
+        h2 { margin-bottom: 10px; }
+        .subtitle { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 25px; }
+        .input-group { text-align: left; margin-bottom: 20px; }
+        label { display: block; font-size: 0.8rem; margin-bottom: 8px; color: var(--text-muted); }
         input {
             width: 100%;
             padding: 12px 16px;
-            background: rgba(15, 23, 42, 0.6);
+            background: #0f172a;
             border: 1px solid var(--border);
             border-radius: 12px;
             color: white;
-            font-size: 1rem;
-            transition: all 0.3s;
         }
-        input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-            background: rgba(15, 23, 42, 0.8);
-        }
-        .btn-solicitar {
+        button {
             width: 100%;
             padding: 14px;
-            background: #25D366;
-            color: white;
+            background: var(--primary);
             border: none;
             border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-top: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-        .btn-solicitar:hover {
-            background: #128C7E;
-            transform: translateY(-1px);
-        }
-        .btn-solicitar:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-        .error-msg {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--error);
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            margin-top: 20px;
-            display: none;
-            border: 1px solid rgba(239, 68, 68, 0.2);
-        }
-        .success-msg {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--success);
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            margin-top: 20px;
-            display: none;
-            border: 1px solid rgba(16, 185, 129, 0.2);
-        }
-        .back-link {
-            display: inline-block;
-            margin-top: 25px;
-            color: var(--text-muted);
-            text-decoration: none;
-            font-size: 0.875rem;
-            transition: color 0.2s;
-        }
-        .back-link:hover {
-            color: whitesmoke;
-        }
-        .password-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-        .password-wrapper input {
-            padding-right: 40px;
-        }
-        .toggle-password {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: transparent;
-            border: none;
-            color: #94a3b8;
-            cursor: pointer;
-            font-size: 1rem;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            transition: background 0.2s;
-        }
-        .toggle-password:hover {
-            background: rgba(255,255,255,0.1);
             color: white;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
         }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .error-msg, .success-msg { padding: 10px; border-radius: 8px; font-size: 0.85rem; margin-top: 15px; display: none; }
+        .error-msg { background: rgba(239,68,68,0.1); color: var(--error); }
+        .success-msg { background: rgba(16,185,129,0.1); color: var(--success); }
+        .back-link { display: inline-block; margin-top: 20px; color: var(--text-muted); text-decoration: none; }
+        .back-link:hover { color: white; }
     </style>
 </head>
 <body>
-<div class="request-card">
-    <div class="logo-area">
-        <i class="fas fa-user-plus"></i>
-        <h2>Solicitar Acceso</h2>
-        <p class="subtitle">Registro de nuevo usuario para Caja Registradora</p>
+<div class="card">
+    <div class="logo"><i class="fas fa-user-plus"></i></div>
+    <h2>Solicitar Acceso</h2>
+    <p class="subtitle">Completa tus datos y envía tu solicitud por WhatsApp</p>
+
+    <div class="input-group">
+        <label>Correo Electrónico</label>
+        <input type="email" id="email" placeholder="tu@correo.com">
     </div>
-
-    <form id="requestForm">
-        <div class="form-group">
-            <label>Correo Electrónico (usuario)</label>
-            <input type="email" id="email" placeholder="tu@email.com" required autocomplete="off">
-        </div>
-        <div class="form-group">
-            <label>Contraseña</label>
-            <div class="password-wrapper">
-                <input type="password" id="password" placeholder="Mínimo 6 caracteres" required>
-                <button type="button" class="toggle-password" id="togglePasswordBtn">
-                    <i class="fas fa-eye"></i>
-                </button>
-            </div>
-        </div>
-        <div class="form-group">
-            <label>Confirmar Contraseña</label>
-            <div class="password-wrapper">
-                <input type="password" id="confirmPassword" placeholder="Repite la contraseña" required>
-                <button type="button" class="toggle-password" id="toggleConfirmBtn">
-                    <i class="fas fa-eye"></i>
-                </button>
-            </div>
-        </div>
-        <button type="submit" id="submitBtn" class="btn-solicitar">
-            <i class="fab fa-whatsapp"></i> Solicitar por WhatsApp
-        </button>
-    </form>
-
+    <div class="input-group">
+        <label>Contraseña Deseada</label>
+        <input type="text" id="password" placeholder="mínimo 6 caracteres">
+    </div>
+    <div class="input-group">
+        <label>Nombre Completo (opcional)</label>
+        <input type="text" id="nombre" placeholder="Ej: Juan Pérez">
+    </div>
+    <button id="solicitarBtn"><i class="fab fa-whatsapp"></i> Solicitar por WhatsApp</button>
+    
     <div id="errorMsg" class="error-msg"></div>
     <div id="successMsg" class="success-msg"></div>
-
-    <a href="index.html" class="back-link">
-        <i class="fas fa-chevron-left"></i> Volver al inicio de sesión
-    </a>
+    
+    <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Volver al inicio</a>
 </div>
 
 <script>
-    // Mostrar/ocultar contraseña para ambos campos
-    const togglePassword = document.getElementById('togglePasswordBtn');
-    const passwordInput = document.getElementById('password');
-    const eyeIconPass = togglePassword.querySelector('i');
-
-    const toggleConfirm = document.getElementById('toggleConfirmBtn');
-    const confirmInput = document.getElementById('confirmPassword');
-    const eyeIconConfirm = toggleConfirm.querySelector('i');
-
-    togglePassword.addEventListener('click', () => {
-        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-        passwordInput.setAttribute('type', type);
-        if (type === 'password') {
-            eyeIconPass.classList.remove('fa-eye-slash');
-            eyeIconPass.classList.add('fa-eye');
-        } else {
-            eyeIconPass.classList.remove('fa-eye');
-            eyeIconPass.classList.add('fa-eye-slash');
-        }
-    });
-
-    toggleConfirm.addEventListener('click', () => {
-        const type = confirmInput.getAttribute('type') === 'password' ? 'text' : 'password';
-        confirmInput.setAttribute('type', type);
-        if (type === 'password') {
-            eyeIconConfirm.classList.remove('fa-eye-slash');
-            eyeIconConfirm.classList.add('fa-eye');
-        } else {
-            eyeIconConfirm.classList.remove('fa-eye');
-            eyeIconConfirm.classList.add('fa-eye-slash');
-        }
-    });
-
-    const form = document.getElementById('requestForm');
-    const submitBtn = document.getElementById('submitBtn');
-    const errorDiv = document.getElementById('errorMsg');
-    const successDiv = document.getElementById('successMsg');
-
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        // Limpiar mensajes anteriores
-        errorDiv.style.display = 'none';
-        successDiv.style.display = 'none';
-        
+    const TELEFONO = '5355542964';
+    document.getElementById('solicitarBtn').addEventListener('click', async () => {
         const email = document.getElementById('email').value.trim();
-        const password = document.getElementById('password').value;
-        const confirm = document.getElementById('confirmPassword').value;
-        
-        // Validaciones
-        if (!email) {
-            mostrarError('Por favor ingresa un correo electrónico.');
+        const password = document.getElementById('password').value.trim();
+        const nombre = document.getElementById('nombre').value.trim();
+        const errorDiv = document.getElementById('errorMsg');
+        const successDiv = document.getElementById('successMsg');
+        const btn = document.getElementById('solicitarBtn');
+
+        errorDiv.style.display = 'none';
+        successDiv.style.display = 'hide';
+
+        if (!email || !email.includes('@')) {
+            errorDiv.innerText = '❌ Correo inválido.';
+            errorDiv.style.display = 'block';
             return;
         }
-        if (!password) {
-            mostrarError('Por favor ingresa una contraseña.');
+        if (!password || password.length < 6) {
+            errorDiv.innerText = '❌ Contraseña (mínimo 6 caracteres).';
+            errorDiv.style.display = 'block';
             return;
         }
-        if (password.length < 6) {
-            mostrarError('La contraseña debe tener al menos 6 caracteres.');
-            return;
-        }
-        if (password !== confirm) {
-            mostrarError('Las contraseñas no coinciden.');
-            return;
-        }
-        
-        // Preparar mensaje para WhatsApp
-        const mensaje = `Deseo solicitar un usuario en la plataforma Caja Registradora. Mis datos son:%0A%0A📧 *Usuario (email):* ${encodeURIComponent(email)}%0A🔒 *Contraseña:* ${encodeURIComponent(password)}%0A%0AQuedo atento a la activación.`;
-        const numero = '5355542964';
-        const url = `https://wa.me/${numero}?text=${mensaje}`;
-        
-        // Deshabilitar botón mientras se procesa
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Abriendo WhatsApp...';
-        
+
+        let mensaje = `📢 *SOLICITUD DE USUARIO - CAJA REGISTRADORA*%0A`;
+        mensaje += `%0A✉️ *Correo:* ${encodeURIComponent(email)}`;
+        mensaje += `%0A🔑 *Contraseña:* ${encodeURIComponent(password)}`;
+        if (nombre) mensaje += `%0A👤 *Nombre:* ${encodeURIComponent(nombre)}`;
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparando...';
+
         try {
-            // Abrir WhatsApp (puede ser en nueva pestaña)
+            const url = `https://api.whatsapp.com/send?phone=${TELEFONO}&text=${mensaje}`;
+            successDiv.innerHTML = `✅ Solicitud lista. <a href="${url}" target="_blank" style="color:var(--success);">Haz clic aquí</a> si no se abre automáticamente.`;
+            successDiv.style.display = 'block';
             window.open(url, '_blank');
-            mostrarExito('Solicitud enviada. Serás redirigido a WhatsApp para confirmar el envío. En breve te contactaremos.');
-            // Opcional: limpiar formulario después de éxito
-            // document.getElementById('email').value = '';
-            // document.getElementById('password').value = '';
-            // document.getElementById('confirmPassword').value = '';
         } catch (err) {
-            mostrarError('Hubo un error al abrir WhatsApp. Inténtalo de nuevo.');
-            console.error(err);
+            errorDiv.innerText = '❌ Error: ' + err.message;
+            errorDiv.style.display = 'block';
         } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fab fa-whatsapp"></i> Solicitar por WhatsApp';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fab fa-whatsapp"></i> Solicitar por WhatsApp';
         }
     });
-    
-    function mostrarError(mensaje) {
-        errorDiv.innerText = mensaje;
-        errorDiv.style.display = 'block';
-        setTimeout(() => {
-            errorDiv.style.display = 'none';
-        }, 5000);
-    }
-    
-    function mostrarExito(mensaje) {
-        successDiv.innerText = mensaje;
-        successDiv.style.display = 'block';
-        setTimeout(() => {
-            successDiv.style.display = 'none';
-        }, 8000);
-    }
 </script>
 </body>
 </html>
