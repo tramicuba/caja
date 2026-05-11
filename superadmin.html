@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Panel Maestro | Nostalgia Cubana</title>
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -28,6 +29,9 @@
         .status-expired { background: #fff7ed; color: #9a3412; }
         .status-deleted { background: #fee2e2; color: #991b1b; }
         .date-input { padding: 5px; border: 1px solid #cbd5e1; border-radius: 4px; }
+        .status-bar { font-size: 0.7rem; padding: 4px 8px; border-radius: 20px; display: inline-block; background: #e2e8f0; color: #333; }
+        .online { background: #dcfce7; color: #166534; }
+        .offline { background: #fee2e2; color: #991b1b; }
         @media (max-width: 768px) {
             .container { padding: 15px; }
             .grid-form { grid-template-columns: 1fr; }
@@ -37,7 +41,7 @@
 <body>
 <nav>
     <div style="font-weight: bold;"><i class="fas fa-crown" style="color: #fbbf24;"></i> Panel Maestro | Nostalgia Cubana</div>
-    <button onclick="cerrarSesion()" style="background:none; color:white; border:1px solid rgba(255,255,255,0.3); padding:8px 16px; border-radius:8px;">Cerrar Sesión</button>
+    <div><span id="connectionStatus" class="status-bar">🔄</span> <button onclick="cerrarSesion()" style="background:none; color:white; border:1px solid rgba(255,255,255,0.3); padding:8px 16px; border-radius:8px; margin-left:10px;">Cerrar Sesión</button></div>
 </nav>
 <div class="container">
     <div class="card">
@@ -61,9 +65,29 @@
 </div>
 
 <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW error:', err));
+        });
+    }
+    function updateConnectionStatus() {
+        const statusDiv = document.getElementById('connectionStatus');
+        if (navigator.onLine) {
+            statusDiv.innerHTML = '✅ En línea';
+            statusDiv.className = 'status-bar online';
+        } else {
+            statusDiv.innerHTML = '⚠️ Sin conexión (no se pueden crear usuarios)';
+            statusDiv.className = 'status-bar offline';
+        }
+    }
+    window.addEventListener('online', updateConnectionStatus);
+    window.addEventListener('offline', updateConnectionStatus);
+    updateConnectionStatus();
+
     const sb = window.supabaseInstance;
 
     async function cargarAdmins() {
+        if (!navigator.onLine) return;
         const { data } = await sb.from('perfiles').select('*').eq('rol', 'admin').order('vencimiento', { ascending: true });
         const lista = document.getElementById('listaAdmins');
         lista.innerHTML = '';
@@ -85,11 +109,13 @@
     }
 
     window.actualizarDato = async function(id, campo, valor) {
+        if (!navigator.onLine) { alert("Sin conexión. No se puede actualizar."); return; }
         await sb.from('perfiles').update({ [campo]: valor }).eq('id', id);
         cargarAdmins();
     };
 
     async function eliminarLogico(id) {
+        if (!navigator.onLine) { alert("Sin conexión."); return; }
         if (confirm("¿Marcar este usuario como ELIMINADO?")) {
             await sb.from('perfiles').update({ eliminado: true }).eq('id', id);
             cargarAdmins();
@@ -97,6 +123,7 @@
     }
 
     async function crearAdmin() {
+        if (!navigator.onLine) { alert("Sin conexión. No se puede crear usuario."); return; }
         const email = document.getElementById('newEmail').value.trim();
         const password = document.getElementById('newPass').value;
         const vencimiento = document.getElementById('newVence').value;
@@ -106,6 +133,9 @@
         await sb.from('perfiles').insert([{ id: authData.user.id, email, rol: 'admin', vencimiento, premium_reportes: false, premium_personal: true, eliminado: false }]);
         alert("Cliente creado");
         cargarAdmins();
+        document.getElementById('newEmail').value = '';
+        document.getElementById('newPass').value = '';
+        document.getElementById('newVence').value = '';
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
