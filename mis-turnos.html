@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Mis Turnos | Nostalgia Cubana</title>
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -32,6 +33,9 @@
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
         .modal-close { background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; }
         .menu-toggle { display: none; position: fixed; top: 15px; left: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; padding: 10px 15px; z-index: 101; cursor: pointer; }
+        .status-bar { font-size: 0.7rem; padding: 4px 8px; border-radius: 20px; display: inline-block; background: #0f172a; margin-left: 10px; }
+        .online { color: var(--success); }
+        .offline { color: var(--danger); }
         @media (max-width: 768px) {
             .menu-toggle { display: block; }
             .sidebar { transform: translateX(-100%); width: 80%; max-width: 280px; }
@@ -54,13 +58,16 @@
     </div>
 
     <div class="main-content">
-        <h1><i class="fas fa-clipboard-list"></i> Historial de Turnos</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1><i class="fas fa-clipboard-list"></i> Historial de Turnos</h1>
+            <div id="connectionStatus" class="status-bar">🔄</div>
+        </div>
         <div class="table-container">
             <table class="turnos-table">
                 <thead>
                     <tr><th>#</th><th>Inicio (Cuba)</th><th>Fin (Cuba)</th><th>Duración</th><th>Ventas ($)</th><th>Ganancia ($)</th><th>Exportar</th></tr>
                 </thead>
-                <tbody id="turnosBody"><tr><td colspan="7">Cargando...</td></tr></tbody>
+                <tbody id="turnosBody"><tr><td colspan="7">Cargando...</tr></tbody>
             </table>
         </div>
     </div>
@@ -73,6 +80,25 @@
     </div>
 
     <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW error:', err));
+            });
+        }
+        function updateConnectionStatus() {
+            const statusDiv = document.getElementById('connectionStatus');
+            if (navigator.onLine) {
+                statusDiv.innerHTML = '✅ En línea';
+                statusDiv.className = 'status-bar online';
+            } else {
+                statusDiv.innerHTML = '⚠️ Sin conexión (datos locales)';
+                statusDiv.className = 'status-bar offline';
+            }
+        }
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+        updateConnectionStatus();
+
         const sb = window.supabaseInstance;
         let vendedorId = null;
 
@@ -83,6 +109,10 @@
         }
 
         async function cargarTurnos() {
+            if (!navigator.onLine) {
+                document.getElementById('turnosBody').innerHTML = '<tr><td colspan="7">⚠️ Sin conexión. No se pueden cargar turnos.</tr>';
+                return;
+            }
             const { data: turnos, error } = await sb
                 .from('turnos')
                 .select('*')
@@ -91,11 +121,11 @@
             const tbody = document.getElementById('turnosBody');
             if (error) {
                 console.error(error);
-                tbody.innerHTML = '<tr><td colspan="7">Error al cargar turnos</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7">Error al cargar turnos</tr>';
                 return;
             }
             if (!turnos || turnos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7">No hay turnos registrados</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7">No hay turnos registrados</tr>';
                 return;
             }
             tbody.innerHTML = '';
@@ -105,7 +135,6 @@
                 let finLocal = 'Activo aún';
                 let duracion = 'En curso';
                 let totalVentas = 0, totalGanancia = 0;
-
                 if (t.fin) {
                     finLocal = formatearFechaCuba(t.fin);
                     const diffMs = new Date(t.fin) - new Date(t.inicio);
@@ -113,7 +142,6 @@
                     const minutos = Math.floor((diffMs % 3600000) / 60000);
                     duracion = `${horas}h ${minutos}m`;
                 }
-
                 const end = t.fin || new Date().toISOString();
                 const { data: ventasTurno, error: vError } = await sb
                     .from('ventas')
@@ -131,7 +159,6 @@
                         totalGanancia += pt - costo;
                     });
                 }
-
                 const row = document.createElement('tr');
                 row.className = 'turno-row';
                 row.setAttribute('data-inicio', t.inicio);
@@ -143,9 +170,7 @@
                     <td>${window.escapeHtml(duracion)}</td>
                     <td>$${totalVentas.toFixed(2)}</td>
                     <td style="color:var(--success);">$${totalGanancia.toFixed(2)}</td>
-                    <td>
-                        <button class="export-btn-turno" data-inicio="${t.inicio}" data-fin="${t.fin || ''}" title="Exportar ventas"><i class="fas fa-file-excel"></i> Exportar</button>
-                    </td>
+                    <td><button class="export-btn-turno" data-inicio="${t.inicio}" data-fin="${t.fin || ''}" title="Exportar ventas"><i class="fas fa-file-excel"></i> Exportar</button></td>
                 `;
                 row.addEventListener('click', (e) => {
                     if (!e.target.closest('.export-btn-turno')) {
@@ -154,7 +179,6 @@
                 });
                 tbody.appendChild(row);
             }
-
             document.querySelectorAll('.export-btn-turno').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     e.stopPropagation();
@@ -166,6 +190,10 @@
         }
 
         async function verVentasTurno(inicioISO, finISO) {
+            if (!navigator.onLine) {
+                alert("Sin conexión. No se pueden ver las ventas del turno.");
+                return;
+            }
             const finReal = finISO || new Date().toISOString();
             try {
                 const { data: ventas, error } = await sb
@@ -180,18 +208,16 @@
                 const modalBody = document.getElementById('modalVentasBody');
                 modalBody.innerHTML = '';
                 if (!ventas || ventas.length === 0) {
-                    modalBody.innerHTML = '<tr><td colspan="5">No hay ventas en este turno</td></tr>';
+                    modalBody.innerHTML = '<tr><td colspan="5">No hay ventas en este turno</tr>';
                     document.getElementById('modalTurno').classList.add('active');
                     return;
                 }
-
                 const productoIds = [...new Set(ventas.map(v => v.producto_id).filter(id => id))];
                 let productosMap = new Map();
                 if (productoIds.length) {
                     const { data: prods } = await sb.from('productos').select('id, nombre').in('id', productoIds);
                     if (prods) prods.forEach(p => productosMap.set(p.id, p.nombre));
                 }
-
                 let totalVentas = 0, totalGanancia = 0;
                 for (const v of ventas) {
                     const producto = productosMap.get(v.producto_id) || 'Producto eliminado';
@@ -227,6 +253,10 @@
         }
 
         async function exportarTurnoCSV(inicioISO, finISO) {
+            if (!navigator.onLine) {
+                alert("Sin conexión. No se puede exportar.");
+                return;
+            }
             const finReal = finISO || new Date().toISOString();
             try {
                 const { data: ventas, error } = await sb
@@ -241,14 +271,12 @@
                     alert('No hay ventas en este turno para exportar.');
                     return;
                 }
-
                 const productoIds = [...new Set(ventas.map(v => v.producto_id).filter(id => id))];
                 let productosMap = new Map();
                 if (productoIds.length) {
                     const { data: prods } = await sb.from('productos').select('id, nombre').in('id', productoIds);
                     if (prods) prods.forEach(p => productosMap.set(p.id, p.nombre));
                 }
-
                 const grupos = new Map();
                 for (const v of ventas) {
                     const nombre = productosMap.get(v.producto_id) || 'Producto eliminado';
@@ -264,7 +292,6 @@
                         grupos.set(key, { producto: nombre, precioUnitario, cantidad, total: precioTotal });
                     }
                 }
-
                 const separador = ';';
                 let csv = "Producto" + separador + "Cantidad vendida" + separador + "Precio de venta (U)" + separador + "Total\n";
                 let totalGeneral = 0;
@@ -273,7 +300,6 @@
                     totalGeneral += grupo.total;
                 }
                 csv += `"TOTAL GENERAL"${separador}${separador}${separador}$${totalGeneral.toFixed(2)}\n`;
-
                 const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
                 const url = URL.createObjectURL(blob);
@@ -290,7 +316,6 @@
             }
         }
 
-        // Función auxiliar para CSV
         window.escapeCSV = function(str) {
             if (!str) return '';
             if (str.includes('"') || str.includes(';') || str.includes(',')) {
@@ -299,7 +324,6 @@
             return str;
         };
 
-        // Cerrar modal
         document.getElementById('closeModalBtn').addEventListener('click', () => {
             document.getElementById('modalTurno').classList.remove('active');
         });
@@ -312,14 +336,12 @@
             const perfil = await window.validarAccesoGlobal(['dependiente', 'admin']);
             if (!perfil) return;
             vendedorId = perfil.id;
-
             if (perfil.vencimiento) {
                 const dias = Math.ceil((new Date(perfil.vencimiento) - new Date()) / 86400000);
                 const clase = dias <= 7 ? 'vence-pronto' : 'vence-ok';
                 const texto = dias <= 0 ? 'Suscripción vencida' : `Vence en ${dias} días`;
                 document.getElementById('vencimiento-info').innerHTML = `<span class="vencimiento-badge ${clase}">${texto}</span>`;
             }
-
             await cargarTurnos();
         });
 
