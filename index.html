@@ -157,7 +157,24 @@
     }
 
     document.getElementById('loginBtn').onclick = login;
-    // Contador de usuarios (opcional, se puede implementar después)
+    // Función para cargar la cantidad de usuarios
+async function cargarContadorUsuarios() {
+    const supabase = window.supabaseInstance;
+    // Contar todos los perfiles (puedes ajustar el filtro si quieres solo activos)
+    const { count, error } = await supabase
+        .from('perfiles')
+        .select('*', { count: 'exact', head: true });
+    
+    if (!error && count !== null) {
+        document.getElementById('userCount').innerText = count;
+    } else {
+        console.error('Error al contar usuarios:', error);
+        document.getElementById('userCount').innerText = '0';
+    }
+}
+
+// Llamar a la función cuando cargue la página
+    document.addEventListener('DOMContentLoaded', cargarContadorUsuarios);
     document.getElementById('userCount').innerText = '?';
 </script>
 </body>
