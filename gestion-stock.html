@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Inventario | Nostalgia Cubana</title>
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
+    <script src="offline-sync.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -34,6 +36,7 @@
         .vence-ok { background: rgba(16,185,129,0.15); color: var(--success); }
         .vence-pronto { background: rgba(245,158,11,0.15); color: #f59e0b; }
         .menu-toggle { display: none; position: fixed; top: 15px; left: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; padding: 10px 15px; z-index: 101; cursor: pointer; }
+        .pending-badge { background: #f59e0b; border-radius: 20px; padding: 2px 8px; font-size: 0.7rem; font-weight: bold; color: #000; display: inline-block; margin-left: 8px; }
         @media (max-width: 768px) {
             .menu-toggle { display: block; }
             .sidebar { transform: translateX(-100%); width: 80%; max-width: 280px; }
@@ -62,7 +65,7 @@
     <div class="main-content">
         <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
             <h1>Gestión de Productos</h1>
-            <div id="user-info" style="color: var(--text-muted);"></div>
+            <div><span id="pendingBadge" class="pending-badge" style="display: none;">0</span> <span id="user-info" style="color: var(--text-muted);"></span></div>
         </header>
 
         <div class="card">
@@ -87,6 +90,17 @@
         let adminId = null;
         let productosList = [];
 
+        async function actualizarContadorPendientes() {
+            if (window.NostalgiaSync) {
+                const count = await window.NostalgiaSync.getPendingCount();
+                const badge = document.getElementById('pendingBadge');
+                if (badge) {
+                    badge.innerText = count;
+                    badge.style.display = count > 0 ? 'inline-block' : 'none';
+                }
+            }
+        }
+
         async function fetchData() {
             const { data, error } = await sb.from('productos').select('*').eq('owner_id', adminId).order('nombre');
             if (error) { console.error(error); return; }
@@ -97,7 +111,7 @@
         function renderTabla() {
             const container = document.getElementById('lista-stock');
             if (!productosList.length) {
-                container.innerHTML = '<tr><td colspan="6">Sin productos.</td></tr>';
+                container.innerHTML = '<tr><td colspan="6">Sin productos. Si</div>';
                 return;
             }
             container.innerHTML = '';
@@ -106,7 +120,7 @@
                 const stockClass = prod.stock <= 5 ? 'low-stock' : 'ok-stock';
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><b>${window.escapeHtml(prod.nombre)}</b></td>
+                    <td><b>${window.escapeHtml(prod.nombre)}</b>
                     <td>
                         <div class="stock-control">
                             <button class="stock-btn minus" data-id="${prod.id}">-</button>
@@ -121,7 +135,6 @@
                 `;
                 container.appendChild(row);
             }
-            // Asignar eventos después de insertar
             document.querySelectorAll('.stock-btn.minus').forEach(btn => btn.addEventListener('click', async (e) => { e.stopPropagation(); await ajustarStock(btn.dataset.id, 'minus'); }));
             document.querySelectorAll('.stock-btn.plus').forEach(btn => btn.addEventListener('click', async (e) => { e.stopPropagation(); await ajustarStock(btn.dataset.id, 'plus'); }));
             document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', async (e) => { e.stopPropagation(); await removeItem(btn.dataset.id); }));
@@ -142,11 +155,27 @@
                 delta = -cantidad;
             }
             const nuevoStock = producto.stock + delta;
-            const { error } = await sb.from('productos').update({ stock: nuevoStock }).eq('id', id);
-            if (error) return alert('Error: ' + error.message);
-            await sb.from('ajustes_stock').insert({ producto_id: id, cantidad: delta, motivo: `Ajuste manual: ${delta>0 ? 'entrada' : 'salida'} de ${Math.abs(delta)} unidades`, owner_id: adminId, cantidad_signed: delta });
-            producto.stock = nuevoStock;
-            renderTabla();
+            const ajusteData = {
+                producto_id: id,
+                cantidad: delta,
+                motivo: `Ajuste manual: ${delta>0 ? 'entrada' : 'salida'} de ${Math.abs(delta)} unidades`,
+                owner_id: adminId,
+                cantidad_signed: delta,
+                created_at: new Date().toISOString()
+            };
+            if (navigator.onLine) {
+                const { error } = await sb.from('productos').update({ stock: nuevoStock }).eq('id', id);
+                if (error) return alert('Error: ' + error.message);
+                await sb.from('ajustes_stock').insert(ajusteData);
+                producto.stock = nuevoStock;
+                renderTabla();
+            } else {
+                await window.NostalgiaSync.addOperation({ type: 'AJUSTE_STOCK', data: ajusteData });
+                alert("Sin internet. El ajuste se guardará y aplicará cuando recupere la conexión.");
+                producto.stock = nuevoStock;
+                renderTabla();
+            }
+            actualizarContadorPendientes();
         }
 
         async function guardarProducto() {
@@ -157,15 +186,27 @@
             if (!nombre || isNaN(stock) || isNaN(costo) || isNaN(venta)) return alert('Complete campos');
             const { data: nuevo, error } = await sb.from('productos').insert([{ nombre, stock, precio_compra: costo, precio: venta, owner_id: adminId, created_at: new Date().toISOString() }]).select();
             if (error) return alert('Error: ' + error.message);
-            if (stock > 0) await sb.from('ajustes_stock').insert({ producto_id: nuevo[0].id, cantidad: stock, motivo: 'Stock inicial', owner_id: adminId, cantidad_signed: stock });
+            if (stock > 0) {
+                if (navigator.onLine) {
+                    await sb.from('ajustes_stock').insert({ producto_id: nuevo[0].id, cantidad: stock, motivo: 'Stock inicial', owner_id: adminId, cantidad_signed: stock });
+                } else {
+                    await window.NostalgiaSync.addOperation({ type: 'AJUSTE_STOCK', data: { producto_id: nuevo[0].id, cantidad: stock, motivo: 'Stock inicial', owner_id: adminId, cantidad_signed: stock, created_at: new Date().toISOString() } });
+                }
+            }
             document.getElementById('nombre').value = '';
             document.getElementById('stock').value = '';
             document.getElementById('precio_compra').value = '';
             document.getElementById('precio').value = '';
             await fetchData();
+            actualizarContadorPendientes();
         }
 
-        async function removeItem(id) { if (confirm('¿Eliminar producto?')) await sb.from('productos').delete().eq('id', id); fetchData(); }
+        async function removeItem(id) {
+            if (confirm('¿Eliminar producto?')) {
+                await sb.from('productos').delete().eq('id', id);
+                fetchData();
+            }
+        }
 
         document.addEventListener('DOMContentLoaded', async () => {
             const perfil = await window.validarAccesoGlobal(['admin']);
@@ -180,9 +221,10 @@
             }
             await fetchData();
             document.getElementById('guardarBtn').addEventListener('click', guardarProducto);
+            setInterval(actualizarContadorPendientes, 10000);
+            actualizarContadorPendientes();
         });
 
-        // Sidebar toggle
         const toggle = document.getElementById('menuToggle'), side = document.getElementById('sidebar');
         toggle.addEventListener('click', () => side.classList.toggle('open'));
         document.addEventListener('click', (e) => { if (window.innerWidth <= 768 && !side.contains(e.target) && !toggle.contains(e.target) && side.classList.contains('open')) side.classList.remove('open'); });
