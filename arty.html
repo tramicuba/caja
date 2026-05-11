@@ -4,26 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Acceso Maestro | Nostalgia Cubana</title>
-    
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
     <script src="config-auth.js"></script>
-
     <style>
-        :root {
-            --primary: #3b82f6;
-            --primary-hover: #2563eb;
-            --dark: #0f172a;
-            --card: #1e293b;
-            --error: #ef4444;
-            --text-muted: #94a3b8;
-            --border: #334155;
-        }
-
+        :root { --primary: #3b82f6; --primary-hover: #2563eb; --dark: #0f172a; --card: #1e293b; --error: #ef4444; --text-muted: #94a3b8; --border: #334155; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
         body {
             font-family: 'Inter', sans-serif;
             background: var(--dark);
@@ -35,7 +23,6 @@
             padding: 20px;
             overflow: hidden;
         }
-
         .login-card {
             background: var(--card);
             padding: 40px;
@@ -47,50 +34,18 @@
             text-align: center;
             animation: fadeIn 0.5s ease-out;
         }
-
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
-        .logo-area {
-            margin-bottom: 30px;
-        }
-
-        .logo-area i {
-            font-size: 3rem;
-            color: var(--primary);
-            margin-bottom: 15px;
-        }
-
-        h2 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-            letter-spacing: -0.5px;
-        }
-
-        p.subtitle {
-            color: var(--text-muted);
-            font-size: 0.875rem;
-            margin-bottom: 30px;
-        }
-
-        .form-group {
-            text-align: left;
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-            color: var(--text-muted);
-            padding-left: 4px;
-        }
-
+        .logo-area { margin-bottom: 30px; }
+        .logo-area i { font-size: 3rem; color: var(--primary); margin-bottom: 15px; }
+        h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.5px; }
+        p.subtitle { color: var(--text-muted); font-size: 0.875rem; margin-bottom: 30px; }
+        .form-group { text-align: left; margin-bottom: 20px; }
+        label { display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; color: var(--text-muted); padding-left: 4px; }
+        .password-wrapper { position: relative; display: flex; align-items: center; }
+        .password-wrapper input { padding-right: 40px; width: 100%; }
         input {
             width: 100%;
             padding: 12px 16px;
@@ -101,14 +56,25 @@
             font-size: 1rem;
             transition: all 0.3s;
         }
-
-        input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-            background: rgba(15, 23, 42, 0.8);
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-
+        .toggle-password:hover { background: rgba(255,255,255,0.1); color: white; }
         .btn-login {
             width: 100%;
             padding: 14px;
@@ -126,17 +92,8 @@
             justify-content: center;
             gap: 10px;
         }
-
-        .btn-login:hover {
-            background: var(--primary-hover);
-            transform: translateY(-1px);
-        }
-
-        .btn-login:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
+        .btn-login:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .btn-login:disabled { opacity: 0.6; cursor: not-allowed; }
         .error-msg {
             background: rgba(239, 68, 68, 0.1);
             color: var(--error);
@@ -147,7 +104,6 @@
             display: none;
             border: 1px solid rgba(239, 68, 68, 0.2);
         }
-
         .back-link {
             display: inline-block;
             margin-top: 25px;
@@ -156,15 +112,15 @@
             font-size: 0.875rem;
             transition: color 0.2s;
         }
-
-        .back-link:hover {
-            color: white;
-        }
+        .back-link:hover { color: white; }
+        .status-bar { font-size: 0.7rem; padding: 4px 8px; border-radius: 20px; display: inline-block; background: #0f172a; margin-bottom: 15px; }
+        .online { color: #10b981; }
+        .offline { color: #ef4444; }
     </style>
 </head>
 <body>
-
     <div class="login-card">
+        <div id="connectionStatus" class="status-bar">🔄</div>
         <div class="logo-area">
             <i class="fas fa-user-shield"></i>
             <h2>Super Admin</h2>
@@ -178,9 +134,13 @@
             </div>
             <div class="form-group">
                 <label>Contraseña</label>
-                <input type="password" id="password" placeholder="••••••••" required>
+                <div class="password-wrapper">
+                    <input type="password" id="password" placeholder="••••••••" required>
+                    <button type="button" class="toggle-password" id="togglePasswordBtn">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
             </div>
-            
             <button type="submit" id="loginBtn" class="btn-login">
                 <span>Ingresar al Sistema</span>
                 <i class="fas fa-arrow-right"></i>
@@ -188,24 +148,49 @@
         </form>
 
         <div id="error" class="error-msg"></div>
-        
-        <a href="index.html" class="back-link">
-            <i class="fas fa-chevron-left"></i> Volver al inicio
-        </a>
+        <a href="index.html" class="back-link"><i class="fas fa-chevron-left"></i> Volver al inicio</a>
     </div>
 
     <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW error:', err));
+            });
+        }
+        function updateConnectionStatus() {
+            const statusDiv = document.getElementById('connectionStatus');
+            if (navigator.onLine) {
+                statusDiv.innerHTML = '✅ En línea';
+                statusDiv.className = 'status-bar online';
+            } else {
+                statusDiv.innerHTML = '⚠️ Sin conexión';
+                statusDiv.className = 'status-bar offline';
+            }
+        }
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+        updateConnectionStatus();
+
         const sb = window.supabaseInstance;
+        const toggleBtn = document.getElementById('togglePasswordBtn');
+        const passwordInput = document.getElementById('password');
+        const eyeIcon = toggleBtn.querySelector('i');
+        toggleBtn.addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            if (type === 'password') {
+                eyeIcon.classList.remove('fa-eye-slash');
+                eyeIcon.classList.add('fa-eye');
+            } else {
+                eyeIcon.classList.remove('fa-eye');
+                eyeIcon.classList.add('fa-eye-slash');
+            }
+        });
 
         async function checkSession() {
             const { data: { user } } = await sb.auth.getUser();
             if (user) {
-                const { data: profile } = await sb
-                    .from('perfiles')
-                    .select('rol')
-                    .eq('id', user.id)
-                    .single();
-                
+                const { data: profile } = await sb.from('perfiles').select('rol').eq('id', user.id).single();
                 if (profile?.rol === 'superadmin') {
                     window.location.href = 'superadmin.html';
                 }
@@ -224,34 +209,14 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Autenticando...';
 
             try {
-                const { data: authData, error: authError } = await sb.auth.signInWithPassword({ 
-                    email, 
-                    password 
-                });
-
+                if (!navigator.onLine) throw new Error("Sin conexión a internet.");
+                const { data: authData, error: authError } = await sb.auth.signInWithPassword({ email, password });
                 if (authError) throw new Error("Acceso denegado. Verifique sus credenciales.");
-
-                const { data: profile, error: profileError } = await sb
-                    .from('perfiles')
-                    .select('rol, eliminado')
-                    .eq('id', authData.user.id)
-                    .single();
-
+                const { data: profile, error: profileError } = await sb.from('perfiles').select('rol, eliminado').eq('id', authData.user.id).single();
                 if (profileError || !profile) throw new Error("No se encontró el perfil de administrador.");
-                
-                if (profile.eliminado) {
-                    await sb.auth.signOut();
-                    throw new Error("Esta cuenta maestra ha sido desactivada.");
-                }
-
-                if (profile.rol !== 'superadmin') {
-                    await sb.auth.signOut();
-                    throw new Error("No tiene privilegios de Super Administrador.");
-                }
-
-                // Éxito
+                if (profile.eliminado) { await sb.auth.signOut(); throw new Error("Esta cuenta maestra ha sido desactivada."); }
+                if (profile.rol !== 'superadmin') { await sb.auth.signOut(); throw new Error("No tiene privilegios de Super Administrador."); }
                 window.location.href = 'superadmin.html';
-
             } catch (err) {
                 errorDiv.innerText = err.message;
                 errorDiv.style.display = 'block';
@@ -259,8 +224,6 @@
                 btn.innerHTML = '<span>Ingresar al Sistema</span><i class="fas fa-arrow-right"></i>';
             }
         });
-
-        // Verificar si ya hay una sesión activa al cargar
         checkSession();
     </script>
 </body>
