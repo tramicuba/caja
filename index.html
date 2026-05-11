@@ -113,6 +113,18 @@
             text-decoration: underline;
         }
     </style>
+    <link rel="manifest" href="manifest.json">
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').then(registration => {
+        console.log('SW registrado: ', registration);
+      }).catch(registrationError => {
+        console.log('Fallo SW: ', registrationError);
+      });
+    });
+  }
+</script>
 </head>
 <body>
 <div class="login-card">
