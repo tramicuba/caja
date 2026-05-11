@@ -1,7 +1,7 @@
 {
   "name": "Nostalgia Cubana - Gestión de Ventas",
   "short_name": "Nostalgia",
-  "start_url": "caja/index.html",
+  "start_url": "/caja/index.html",
   "display": "standalone",
   "theme_color": "#2563eb",
   "background_color": "#0f172a",
