@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Mis Ventas | Nostalgia Cubana</title>
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -31,6 +32,9 @@
         th { color: var(--text-muted); font-weight: 600; }
         .delete-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1.1rem; margin-left: 8px; }
         .menu-toggle { display: none; position: fixed; top: 15px; left: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; padding: 10px 15px; z-index: 101; cursor: pointer; }
+        .status-bar { font-size: 0.7rem; padding: 4px 8px; border-radius: 20px; display: inline-block; background: #0f172a; margin-left: 10px; }
+        .online { color: var(--success); }
+        .offline { color: var(--danger); }
         @media (max-width: 768px) {
             .menu-toggle { display: block; }
             .sidebar { transform: translateX(-100%); width: 80%; max-width: 280px; }
@@ -53,7 +57,10 @@
     </div>
 
     <div class="main-content">
-        <h1><i class="fas fa-chart-line"></i> Mis Ventas</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1><i class="fas fa-chart-line"></i> Mis Ventas</h1>
+            <div id="connectionStatus" class="status-bar">🔄</div>
+        </div>
         <div class="filter-bar">
             <div class="filter-group"><label>Desde</label><input type="date" id="desde"></div>
             <div class="filter-group"><label>Hasta</label><input type="date" id="hasta"></div>
@@ -71,6 +78,25 @@
     </div>
 
     <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW error:', err));
+            });
+        }
+        function updateConnectionStatus() {
+            const statusDiv = document.getElementById('connectionStatus');
+            if (navigator.onLine) {
+                statusDiv.innerHTML = '✅ En línea';
+                statusDiv.className = 'status-bar online';
+            } else {
+                statusDiv.innerHTML = '⚠️ Sin conexión';
+                statusDiv.className = 'status-bar offline';
+            }
+        }
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+        updateConnectionStatus();
+
         const sb = window.supabaseInstance;
         let currentUser = null;
 
@@ -87,9 +113,12 @@
             const tbody = document.querySelector('#tablaVentas tbody');
             const footer = document.getElementById('tablaFooter');
             try {
-                tbody.innerHTML = '<tr><td colspan="6">Cargando...</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6">Cargando...</tr>';
                 footer.style.display = 'none';
-
+                if (!navigator.onLine) {
+                    tbody.innerHTML = '<tr><td colspan="6">⚠️ Sin conexión. No se pueden cargar ventas.</tr>';
+                    return;
+                }
                 let query = sb.from('ventas').select('*').eq('vendedor_id', currentUser.id).eq('eliminada', false).order('created_at', { ascending: false });
                 if (desde && hasta) {
                     const { start, end } = getLocalDateRange(desde, hasta);
@@ -97,22 +126,18 @@
                 }
                 const { data: ventas, error } = await query;
                 if (error) throw error;
-
                 if (!ventas || ventas.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6">No hay ventas en el período.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6">No hay ventas en el período.</tr>';
                     return;
                 }
-
                 const productoIds = [...new Set(ventas.map(v => v.producto_id).filter(id => id))];
                 let productosMap = new Map();
                 if (productoIds.length) {
                     const { data: prods } = await sb.from('productos').select('id, nombre').in('id', productoIds);
                     if (prods) prods.forEach(p => productosMap.set(p.id, p.nombre));
                 }
-
                 tbody.innerHTML = '';
                 let totalVentas = 0;
-
                 for (const v of ventas) {
                     const producto = productosMap.get(v.producto_id) || 'Producto eliminado';
                     const cantidad = v.cantidad || 1;
@@ -120,7 +145,6 @@
                     const precioUnitario = cantidad ? precioTotal / cantidad : 0;
                     totalVentas += precioTotal;
                     const fechaHora = new Date(v.created_at).toLocaleString();
-
                     const row = `
                         <tr>
                             <td>${window.escapeHtml(fechaHora)}</td>
@@ -128,17 +152,13 @@
                             <td>${cantidad}</td>
                             <td>$${precioUnitario.toFixed(2)}</td>
                             <td>$${precioTotal.toFixed(2)}</td>
-                            <td>
-                                <button class="delete-btn" data-id="${v.id}" title="Eliminar venta"><i class="fas fa-trash-alt"></i></button>
-                             </td>
-                         </tr>
+                            <td><button class="delete-btn" data-id="${v.id}" title="Eliminar venta"><i class="fas fa-trash-alt"></i></button></td>
+                        </tr>
                     `;
                     tbody.innerHTML += row;
                 }
-
                 document.getElementById('footerTotal').innerHTML = `$${totalVentas.toFixed(2)}`;
                 footer.style.display = 'table-footer-group';
-
                 document.querySelectorAll('.delete-btn').forEach(btn => {
                     btn.addEventListener('click', async (e) => {
                         e.stopPropagation();
@@ -150,7 +170,7 @@
                 });
             } catch (err) {
                 console.error(err);
-                tbody.innerHTML = `<tr><td colspan="6">Error: ${err.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6">Error: ${err.message}</tr>`;
             }
         }
 
@@ -169,25 +189,21 @@
             const perfil = await window.validarAccesoGlobal(['dependiente', 'admin']);
             if (!perfil) return;
             currentUser = perfil;
-
             if (perfil.vencimiento) {
                 const dias = Math.ceil((new Date(perfil.vencimiento) - new Date()) / 86400000);
                 const clase = dias <= 7 ? 'vence-pronto' : 'vence-ok';
                 const texto = dias <= 0 ? 'Suscripción vencida' : `Vence en ${dias} días`;
                 document.getElementById('vencimiento-info').innerHTML = `<span class="vencimiento-badge ${clase}">${texto}</span>`;
             }
-
             const hoy = new Date();
             const hace30 = new Date();
             hace30.setDate(hoy.getDate() - 30);
             document.getElementById('desde').value = hace30.toISOString().split('T')[0];
             document.getElementById('hasta').value = hoy.toISOString().split('T')[0];
-
             document.getElementById('filtrarBtn').addEventListener('click', cargarVentas);
             await cargarVentas();
         });
 
-        // Sidebar toggle
         const toggle = document.getElementById('menuToggle'), side = document.getElementById('sidebar');
         if (toggle) toggle.addEventListener('click', () => side.classList.toggle('open'));
         document.addEventListener('click', (e) => { if (window.innerWidth <= 768 && !side.contains(e.target) && !toggle.contains(e.target) && side.classList.contains('open')) side.classList.remove('open'); });
