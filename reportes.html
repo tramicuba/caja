@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Reportes de Ventas | Nostalgia Cubana</title>
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
@@ -34,6 +35,9 @@
         .vence-ok { background: rgba(16,185,129,0.15); color: var(--success); }
         .vence-pronto { background: rgba(245,158,11,0.15); color: #f59e0b; }
         .menu-toggle { display: none; position: fixed; top: 15px; left: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; padding: 10px 15px; z-index: 101; cursor: pointer; }
+        .status-bar { font-size: 0.7rem; padding: 4px 8px; border-radius: 20px; display: inline-block; background: #0f172a; }
+        .online { color: var(--success); }
+        .offline { color: var(--danger); }
         @media (max-width: 768px) {
             .menu-toggle { display: block; }
             .sidebar { transform: translateX(-100%); width: 80%; max-width: 280px; }
@@ -61,7 +65,10 @@
     </div>
 
     <div class="main-content">
-        <h1>Reportes de Ventas</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1>Reportes de Ventas</h1>
+            <div id="connectionStatus" class="status-bar">🔄</div>
+        </div>
         <div class="card">
             <div class="filter-bar">
                 <div class="filter-group"><label>Desde</label><input type="date" id="fechaInicio"></div>
@@ -80,14 +87,33 @@
             <div class="table-container">
                 <table id="tablaReportes">
                     <thead><tr><th>Fecha y Hora</th><th>Producto</th><th>Cantidad</th><th>Precio Total</th><th>Costo Unitario</th><th>Ganancia</th><th>Vendedor</th></tr></thead>
-                    <tbody><tr><td colspan="7">Selecciona un rango...</tbody>
-                    <tfoot id="tablaFooter" style="display: none;"><tr><td colspan="3"><strong>TOTALES</strong><td id="footerTotalVentas">$0<td><td id="footerTotalGanancia">$0</tr></tfoot>
+                    <tbody><tr><td colspan="7">Selecciona un rango...</td></tr>
+                    <tfoot id="tablaFooter" style="display: none;"><tr><td colspan="3"><strong>TOTALES</strong><td id="footerTotalVentas">$0</td><td id="footerTotalGanancia">$0</td></tfoot>
                 </table>
             </div>
         </div>
     </div>
 
     <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW error:', err));
+            });
+        }
+        function updateConnectionStatus() {
+            const statusDiv = document.getElementById('connectionStatus');
+            if (navigator.onLine) {
+                statusDiv.innerHTML = '✅ En línea';
+                statusDiv.className = 'status-bar online';
+            } else {
+                statusDiv.innerHTML = '⚠️ Sin conexión (datos locales no disponibles)';
+                statusDiv.className = 'status-bar offline';
+            }
+        }
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+        updateConnectionStatus();
+
         const sb = window.supabaseInstance;
         let ownerIdGlobal = null;
         let vendedoresMap = new Map();
@@ -107,6 +133,10 @@
         }
 
         async function cargarReportes() {
+            if (!navigator.onLine) {
+                alert("Sin conexión. No se pueden cargar reportes.");
+                return;
+            }
             const startDate = document.getElementById('fechaInicio').value;
             const endDate = document.getElementById('fechaFin').value;
             if (!startDate || !endDate) return;
