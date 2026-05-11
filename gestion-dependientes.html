@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Gestión de Dependientes | Nostalgia Cubana</title>
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
@@ -32,6 +33,9 @@
         .alert-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--danger); }
         .alert-success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: var(--success); }
         .menu-toggle { display: none; position: fixed; top: 15px; left: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; padding: 10px 15px; z-index: 101; cursor: pointer; }
+        .status-bar { font-size: 0.7rem; padding: 4px 8px; border-radius: 20px; display: inline-block; background: #0f172a; margin-left: 10px; }
+        .online { color: var(--success); }
+        .offline { color: var(--danger); }
         @media (max-width: 768px) {
             .menu-toggle { display: block; }
             .sidebar { transform: translateX(-100%); width: 80%; max-width: 280px; }
@@ -57,7 +61,10 @@
     </div>
 
     <div class="main-content">
-        <h1>Gestión de Dependientes</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1>Gestión de Dependientes</h1>
+            <div id="connectionStatus" class="status-bar">🔄</div>
+        </div>
         <div class="card">
             <h3>Registrar Nuevo Vendedor</h3>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
@@ -79,6 +86,25 @@
     </div>
 
     <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW error:', err));
+            });
+        }
+        function updateConnectionStatus() {
+            const statusDiv = document.getElementById('connectionStatus');
+            if (navigator.onLine) {
+                statusDiv.innerHTML = '✅ En línea';
+                statusDiv.className = 'status-bar online';
+            } else {
+                statusDiv.innerHTML = '⚠️ Sin conexión';
+                statusDiv.className = 'status-bar offline';
+            }
+        }
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+        updateConnectionStatus();
+
         const sb = window.supabaseInstance;
         let adminId = null, adminVencimiento = null;
 
@@ -91,6 +117,10 @@
         }
 
         async function listarDependientes() {
+            if (!navigator.onLine) {
+                document.getElementById('tabla-dependientes').innerHTML = '<tr><td colspan="3">Sin conexión (no se pueden cargar)</td></tr>';
+                return;
+            }
             const { data } = await sb.from('perfiles').select('*').eq('admin_id', adminId).eq('rol','dependiente').order('email');
             const tabla = document.getElementById('tabla-dependientes');
             if (!data || data.length === 0) { tabla.innerHTML = '<tr><td colspan="3">No hay vendedores registrados.</td></tr>'; return; }
@@ -108,10 +138,21 @@
             }).join('');
         }
 
-        async function toggleEstado(id, nuevoEstado) { await sb.from('perfiles').update({ estado_activo: nuevoEstado }).eq('id', id); listarDependientes(); }
-        async function eliminarDependiente(id) { if (confirm('¿Eliminar este vendedor?')) { await sb.from('perfiles').update({ eliminado: true, estado_activo: false }).eq('id', id); listarDependientes(); } }
+        async function toggleEstado(id, nuevoEstado) {
+            if (!navigator.onLine) { alert("Sin conexión."); return; }
+            await sb.from('perfiles').update({ estado_activo: nuevoEstado }).eq('id', id);
+            listarDependientes();
+        }
+        async function eliminarDependiente(id) {
+            if (!navigator.onLine) { alert("Sin conexión."); return; }
+            if (confirm('¿Eliminar este vendedor?')) {
+                await sb.from('perfiles').update({ eliminado: true, estado_activo: false }).eq('id', id);
+                listarDependientes();
+            }
+        }
 
         async function crearDependiente() {
+            if (!navigator.onLine) { mostrarAlerta('Sin conexión. No se puede crear el vendedor.', 'error'); return; }
             const email = document.getElementById('dep-email').value.trim();
             const password = document.getElementById('dep-password').value.trim();
             const btn = document.getElementById('btnCrear');
