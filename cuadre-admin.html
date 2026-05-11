@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Cuadre Administrador | Nostalgia Cubana</title>
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -30,6 +31,9 @@
         tfoot td { background: rgba(37,99,235,0.2); font-weight: bold; border-top: 2px solid var(--primary); }
         .btn-logout { margin-top: 50px; color: var(--danger); cursor: pointer; border: 1px solid var(--danger); padding: 10px; text-align: center; border-radius: 8px; }
         .menu-toggle { display: none; position: fixed; top: 15px; left: 15px; background: var(--primary); padding: 10px 15px; border-radius: 8px; z-index: 101; cursor: pointer; }
+        .status-bar { font-size: 0.7rem; padding: 4px 8px; border-radius: 20px; display: inline-block; background: #0f172a; }
+        .online { color: var(--success); }
+        .offline { color: var(--danger); }
         @media (max-width: 768px) {
             .menu-toggle { display: block; }
             .sidebar { transform: translateX(-100%); width: 80%; max-width: 280px; position: fixed; top: 0; left: 0; height: 100vh; transition: transform 0.3s; }
@@ -55,7 +59,10 @@
     </div>
 
     <div class="main-content">
-        <h1>Cuadre Administrador</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1>Cuadre Administrador</h1>
+            <div id="connectionStatus" class="status-bar">🔄</div>
+        </div>
         <div class="card">
             <div class="filter-bar">
                 <div class="filter-group"><label>Inicio</label><input type="datetime-local" id="fechaInicio"></div>
@@ -68,7 +75,7 @@
             <div class="table-container">
                 <table id="tablaCuadre">
                     <thead><tr><th>#</th><th>Producto</th><th>Inicio</th><th>Vendidos</th><th>Precio (U)</th><th>Final</th><th>Total ($)</th></tr></thead>
-                    <tbody><tr><td colspan="7">Cargando...</td></tr></tbody>
+                    <tbody><tr><td colspan="7">Cargando...</td></tr>
                     <tfoot id="totalFooter" style="display:none;"><tr><td colspan="6"><strong>TOTAL GENERAL</strong></td><td id="totalGeneral"></td></tr></tfoot>
                 </table>
             </div>
@@ -80,10 +87,33 @@
     </div>
 
     <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW error:', err));
+            });
+        }
+        function updateConnectionStatus() {
+            const statusDiv = document.getElementById('connectionStatus');
+            if (navigator.onLine) {
+                statusDiv.innerHTML = '✅ En línea';
+                statusDiv.className = 'status-bar online';
+            } else {
+                statusDiv.innerHTML = '⚠️ Sin conexión';
+                statusDiv.className = 'status-bar offline';
+            }
+        }
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+        updateConnectionStatus();
+
         const sb = window.supabaseInstance;
         let adminId = null;
 
         async function cargarCuadre() {
+            if (!navigator.onLine) {
+                alert("Sin conexión. No se puede cargar el cuadre.");
+                return;
+            }
             const inicioStr = document.getElementById('fechaInicio').value, finStr = document.getElementById('fechaFin').value;
             if (!inicioStr || !finStr) return;
             const inicioISO = new Date(inicioStr).toISOString(), finISO = new Date(finStr).toISOString();
@@ -92,7 +122,6 @@
             const { data: ventas } = await sb.from('ventas').select('producto_id, cantidad, precio_total').eq('owner_id', adminId).eq('eliminada', false).gte('created_at', inicioISO).lte('created_at', finISO);
             const { data: ajustes } = await sb.from('ajustes_stock').select('*, productos(nombre)').eq('owner_id', adminId).gte('created_at', inicioISO).lte('created_at', finISO).order('created_at', { ascending: false });
 
-            // Mostrar movimientos manuales
             const movCard = document.getElementById('movimientosCard');
             const movBody = document.getElementById('movimientosBody');
             if (ajustes && ajustes.length) {
@@ -150,6 +179,10 @@
         }
 
         async function exportarCSV() {
+            if (!navigator.onLine) {
+                alert("Sin conexión. No se puede exportar.");
+                return;
+            }
             const inicioStr = document.getElementById('fechaInicio').value, finStr = document.getElementById('fechaFin').value;
             if (!inicioStr || !finStr) return;
             const inicioISO = new Date(inicioStr).toISOString(), finISO = new Date(finStr).toISOString();
