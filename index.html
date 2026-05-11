@@ -6,6 +6,7 @@
     <title>Acceso | Sistema Gestión Nostalgia Cubana</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --primary: #3b82f6; --dark: #0f172a; --error: #ef4444; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -38,17 +39,36 @@
             background: #0f172a;
             color: white;
         }
-        .password-wrapper { position: relative; }
-        .password-wrapper input { padding-right: 45px; }
+        .password-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .password-wrapper input {
+            padding-right: 40px;
+        }
         .toggle-password {
             position: absolute;
             right: 12px;
             top: 50%;
             transform: translateY(-50%);
-            background: none;
+            background: transparent;
             border: none;
             color: #94a3b8;
             cursor: pointer;
+            font-size: 1rem;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        .toggle-password:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
         }
         button {
             width: 100%;
@@ -93,7 +113,9 @@
         <label>Contraseña</label>
         <div class="password-wrapper">
             <input type="password" id="password" placeholder="••••••••">
-            <button type="button" class="toggle-password" id="togglePasswordBtn">👁️</button>
+            <button type="button" class="toggle-password" id="togglePasswordBtn">
+                <i class="fas fa-eye"></i>
+            </button>
         </div>
     </div>
     <div class="input-group">
@@ -106,7 +128,7 @@
     <button id="loginBtn">Iniciar Sesión</button>
     <div id="error" class="error-msg"></div>
     <div class="user-counter">
-        <i class="fas fa-users"></i> CANTIDAD DE USUARIOS: 
+        <i class="fas fa-users"></i> USUARIOS REGISTRADOS: 
         <span id="userCount" class="counter-number">...</span>
     </div>
 </div>
@@ -114,10 +136,18 @@
 <script>
     const toggleBtn = document.getElementById('togglePasswordBtn');
     const passwordInput = document.getElementById('password');
+    const eyeIcon = toggleBtn.querySelector('i');
+
     toggleBtn.addEventListener('click', () => {
         const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
         passwordInput.setAttribute('type', type);
-        toggleBtn.textContent = type === 'password' ? '👁️' : '🙈';
+        if (type === 'password') {
+            eyeIcon.classList.remove('fa-eye-slash');
+            eyeIcon.classList.add('fa-eye');
+        } else {
+            eyeIcon.classList.remove('fa-eye');
+            eyeIcon.classList.add('fa-eye-slash');
+        }
     });
 
     async function login() {
@@ -145,7 +175,6 @@
             if (!profile || profile.eliminado) throw new Error("Cuenta desactivada.");
             if (profile.rol !== selectedRole) throw new Error(`No tienes permiso de ${selectedRole}.`);
 
-            // Redirigir según rol
             const paginas = { superadmin: 'superadmin.html', admin: 'admin.html', dependiente: 'caja.html' };
             window.location.href = paginas[selectedRole];
         } catch (err) {
@@ -156,26 +185,25 @@
         }
     }
 
-    document.getElementById('loginBtn').onclick = login;
-    // Función para cargar la cantidad de usuarios
-async function cargarContadorUsuarios() {
-    const supabase = window.supabaseInstance;
-    // Contar todos los perfiles (puedes ajustar el filtro si quieres solo activos)
-    const { count, error } = await supabase
-        .from('perfiles')
-        .select('*', { count: 'exact', head: true });
-    
-    if (!error && count !== null) {
-        document.getElementById('userCount').innerText = count;
-    } else {
-        console.error('Error al contar usuarios:', error);
-        document.getElementById('userCount').innerText = '0';
+    async function cargarContadorUsuarios() {
+        const supabase = window.supabaseInstance;
+        try {
+            const { count, error } = await supabase
+                .from('perfiles')
+                .select('*', { count: 'exact', head: true });
+            if (!error && count !== null) {
+                document.getElementById('userCount').innerText = count;
+            } else {
+                document.getElementById('userCount').innerText = '0';
+            }
+        } catch (err) {
+            console.error("Error al contar usuarios:", err);
+            document.getElementById('userCount').innerText = '?';
+        }
     }
-}
 
-// Llamar a la función cuando cargue la página
+    document.getElementById('loginBtn').onclick = login;
     document.addEventListener('DOMContentLoaded', cargarContadorUsuarios);
-    document.getElementById('userCount').innerText = '?';
 </script>
 </body>
 </html>
