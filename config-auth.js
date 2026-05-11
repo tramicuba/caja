@@ -1,14 +1,13 @@
 // config-auth.js
 (function() {
     const URL_PROYECTO = 'https://bmmzvqfordvjgzkxzosu.supabase.co';
-    const KEY_PROYECTO = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtbXp2cWZvcmR2amd6a3h6b3N1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1MjAwODYsImV4cCI6MjA5NDA5NjA4Nn0.4mqHOHnoKamDBC78QY8A78bfGLL4GllvyHPLKrvBpAU';
+    const KEY_PROYECTO = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtbXp2cWZvcmR2amd6a3h6b3N1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU5MjY4NzIsImV4cCI6MjA2MTUwMjg3Mn0.K2fXKQ6iXzJkoDqCqG0cJk8lZ9Q_Q7xYXWYdRlZx3Jk'; // Reemplazar por tu anon key real
 
     if (!window.supabaseInstance) {
         window.supabaseInstance = window.supabase.createClient(URL_PROYECTO, KEY_PROYECTO);
     }
 })();
 
-// Función global de escape HTML
 window.escapeHtml = function(str) {
     if (!str) return '';
     return str.replace(/[&<>]/g, function(m) {
@@ -19,7 +18,6 @@ window.escapeHtml = function(str) {
     });
 };
 
-// Función global de validación de acceso y suscripción
 window.validarAccesoGlobal = async function(rolesPermitidos = []) {
     const supabase = window.supabaseInstance;
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -39,14 +37,12 @@ window.validarAccesoGlobal = async function(rolesPermitidos = []) {
         return null;
     }
 
-    // Validar eliminado
     if (profile.eliminado === true) {
         await supabase.auth.signOut();
         window.location.href = 'index.html';
         return null;
     }
 
-    // Validar vencimiento (para admins y dependientes)
     if (profile.rol !== 'superadmin') {
         const ownerId = profile.rol === 'dependiente' ? profile.admin_id : profile.id;
         const { data: admin } = await supabase
@@ -54,7 +50,6 @@ window.validarAccesoGlobal = async function(rolesPermitidos = []) {
             .select('vencimiento')
             .eq('id', ownerId)
             .single();
-
         if (admin && admin.vencimiento) {
             const hoy = new Date();
             const vence = new Date(admin.vencimiento);
@@ -66,7 +61,6 @@ window.validarAccesoGlobal = async function(rolesPermitidos = []) {
         }
     }
 
-    // Validar roles permitidos
     if (rolesPermitidos.length && !rolesPermitidos.includes(profile.rol)) {
         window.location.href = 'index.html';
         return null;
@@ -75,16 +69,15 @@ window.validarAccesoGlobal = async function(rolesPermitidos = []) {
     return profile;
 };
 
-// Función para cerrar sesión
 window.cerrarSesion = async function() {
     await window.supabaseInstance.auth.signOut();
     window.location.href = 'index.html';
 };
-// Inicializar el sistema offline-sync (asegurar que el script ya se haya cargado)
+
+// Inicializar sincronización offline
 if (typeof window.NostalgiaSync !== 'undefined') {
-  window.NostalgiaSync.processQueue();
-  // También podemos exponer funciones auxiliares
-  window.getPendingCount = () => window.NostalgiaSync.getPendingCount();
+    window.NostalgiaSync.processQueue();
+    window.getPendingCount = () => window.NostalgiaSync.getPendingCount();
 } else {
-  console.warn("offline-sync.js no cargado");
+    console.warn("offline-sync.js no cargado");
 }
