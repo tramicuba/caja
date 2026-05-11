@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Acceso | Sistema Gestión Nostalgia Cubana</title>
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config-auth.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --primary: #3b82f6; --dark: #0f172a; --error: #ef4444; }
+        :root { --primary: #3b82f6; --dark: #0f172a; --error: #ef4444; --success: #10b981; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Inter', sans-serif;
@@ -112,23 +113,24 @@
         .solicitar-link a:hover {
             text-decoration: underline;
         }
+        .status-bar {
+            font-size: 0.7rem;
+            margin-bottom: 20px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            display: inline-block;
+            background: #0f172a;
+        }
+        .online { color: var(--success); }
+        .offline { color: var(--error); }
     </style>
-    <link rel="manifest" href="manifest.json">
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').then(registration => {
-        console.log('SW registrado: ', registration);
-      }).catch(registrationError => {
-        console.log('Fallo SW: ', registrationError);
-      });
-    });
-  }
-</script>
 </head>
 <body>
 <div class="login-card">
-    <h2>Sistema Gestión</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>Sistema Gestión</h2>
+        <div id="connectionStatus" class="status-bar">🔄</div>
+    </div>
     <div class="input-group">
         <label>Correo Electrónico</label>
         <input type="email" id="email" placeholder="ejemplo@estudio.com">
@@ -152,7 +154,6 @@
     <button id="loginBtn">Iniciar Sesión</button>
     <div id="error" class="error-msg"></div>
 
-    <!-- Enlace para redirigir a la solicitud de usuario -->
     <div class="solicitar-link">
         <a href="solicitar-usuario.html">
             <i class="fas fa-user-plus"></i> ¿No tienes usuario? Solicita acceso
@@ -166,11 +167,34 @@
 </div>
 
 <script>
-    // Toggle para mostrar/ocultar contraseña
+    // Registrar Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').then(reg => {
+                console.log('SW registrado:', reg);
+            }).catch(err => console.log('Fallo SW:', err));
+        });
+    }
+
+    // Estado de conexión
+    function updateConnectionStatus() {
+        const statusDiv = document.getElementById('connectionStatus');
+        if (navigator.onLine) {
+            statusDiv.innerHTML = '✅ En línea';
+            statusDiv.className = 'status-bar online';
+        } else {
+            statusDiv.innerHTML = '⚠️ Sin conexión (modo offline)';
+            statusDiv.className = 'status-bar offline';
+        }
+    }
+    window.addEventListener('online', updateConnectionStatus);
+    window.addEventListener('offline', updateConnectionStatus);
+    updateConnectionStatus();
+
+    // Toggle contraseña
     const toggleBtn = document.getElementById('togglePasswordBtn');
     const passwordInput = document.getElementById('password');
     const eyeIcon = toggleBtn.querySelector('i');
-
     toggleBtn.addEventListener('click', () => {
         const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
         passwordInput.setAttribute('type', type);
@@ -183,7 +207,7 @@
         }
     });
 
-    // Función de login (existente)
+    // Login
     async function login() {
         const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
@@ -200,17 +224,15 @@
             const { data, error } = await sb.auth.signInWithPassword({ email, password });
             if (error) throw new Error("Credenciales inválidas.");
 
-            const { data: profile, error: profileError } = await sb
+            const { data: profile } = await sb
                 .from('perfiles')
                 .select('rol, eliminado')
                 .eq('id', data.user.id)
                 .single();
 
-            if (profileError || !profile) throw new Error("Perfil no encontrado.");
-            if (profile.eliminado) throw new Error("Cuenta desactivada.");
+            if (!profile || profile.eliminado) throw new Error("Cuenta desactivada.");
             if (profile.rol !== selectedRole) throw new Error(`No tienes permiso de ${selectedRole}.`);
 
-            // Redirigir según rol
             const paginas = { superadmin: 'superadmin.html', admin: 'admin.html', dependiente: 'caja.html' };
             window.location.href = paginas[profile.rol];
         } catch (err) {
@@ -221,7 +243,6 @@
         }
     }
 
-    // Contador de usuarios
     async function cargarContadorUsuarios() {
         const supabase = window.supabaseInstance;
         try {
