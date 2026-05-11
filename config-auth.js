@@ -80,3 +80,11 @@ window.cerrarSesion = async function() {
     await window.supabaseInstance.auth.signOut();
     window.location.href = 'index.html';
 };
+// Inicializar el sistema offline-sync (asegurar que el script ya se haya cargado)
+if (typeof window.NostalgiaSync !== 'undefined') {
+  window.NostalgiaSync.processQueue();
+  // También podemos exponer funciones auxiliares
+  window.getPendingCount = () => window.NostalgiaSync.getPendingCount();
+} else {
+  console.warn("offline-sync.js no cargado");
+}
