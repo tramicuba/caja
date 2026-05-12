@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Solicitar Usuario | Nostalgia Cubana</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --dark: #0f172a;
+            --card: #1e293b;
+            --success: #10b981;
+            --error: #ef4444;
+            --text-muted: #94a3b8;
+            --border: #334155;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--dark);
+            color: white;
+            display: flex;
+            height: 100vh;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .card {
+            background: var(--card);
+            padding: 35px;
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 420px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+        .logo i {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+        h2 {
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 25px;
+        }
+        .input-group {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+        }
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: 0.2s;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+        .back-link:hover {
+            color: white;
+        }
+        .error-msg, .success-msg {
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-top: 15px;
+            display: none;
+        }
+        .error-msg {
+            background: rgba(239,68,68,0.1);
+            color: var(--error);
+            border: 1px solid rgba(239,68,68,0.3);
+        }
+        .success-msg {
+            background: rgba(16,185,129,0.1);
+            color: var(--success);
+            border: 1px solid rgba(16,185,129,0.3);
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">
+        <i class="fas fa-user-plus"></i>
+    </div>
+    <h2>Solicitar Acceso</h2>
+    <p class="subtitle">Completa tus datos y envía tu solicitud por WhatsApp</p>
+
+    <div class="input-group">
+        <label>Correo Electrónico</label>
+        <input type="email" id="email" placeholder="tu@correo.com">
+    </div>
+    <div class="input-group">
+        <label>Contraseña Deseada</label>
+        <input type="text" id="password" placeholder="mínimo 6 caracteres">
+    </div>
+    <div class="input-group">
+        <label>Nombre Completo (opcional)</label>
+        <input type="text" id="nombre" placeholder="Ej: Juan Pérez">
+    </div>
+    <button id="solicitarBtn"><i class="fab fa-whatsapp"></i> Solicitar por WhatsApp</button>
+    
+    <div id="errorMsg" class="error-msg"></div>
+    <div id="successMsg" class="success-msg"></div>
+    
+    <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Volver al inicio</a>
+</div>
+
+<script>
+    const TELEFONO = '5355542964'; // Número de WhatsApp (sin + ni espacios)
+
+    document.getElementById('solicitarBtn').addEventListener('click', async () => {
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value.trim();
+        const nombre = document.getElementById('nombre').value.trim();
+        const errorDiv = document.getElementById('errorMsg');
+        const successDiv = document.getElementById('successMsg');
+        const btn = document.getElementById('solicitarBtn');
+
+        // Ocultar mensajes previos
+        errorDiv.style.display = 'none';
+        successDiv.style.display = 'none';
+
+        // Validaciones básicas
+        if (!email) {
+            errorDiv.innerText = '❌ El correo electrónico es obligatorio.';
+            errorDiv.style.display = 'block';
+            return;
+        }
+        if (!email.includes('@') || !email.includes('.')) {
+            errorDiv.innerText = '❌ Ingresa un correo válido (ej: nombre@dominio.com).';
+            errorDiv.style.display = 'block';
+            return;
+        }
+        if (!password) {
+            errorDiv.innerText = '❌ La contraseña es obligatoria (mínimo 6 caracteres).';
+            errorDiv.style.display = 'block';
+            return;
+        }
+        if (password.length < 6) {
+            errorDiv.innerText = '❌ La contraseña debe tener al menos 6 caracteres.';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        // Construir mensaje
+        let mensaje = `📢 *SOLICITUD DE USUARIO - CAJA REGISTRADORA*%0A`;
+        mensaje += `%0A✉️ *Correo:* ${encodeURIComponent(email)}`;
+        mensaje += `%0A🔑 *Contraseña:* ${encodeURIComponent(password)}`;
+        if (nombre) mensaje += `%0A👤 *Nombre:* ${encodeURIComponent(nombre)}`;
+        mensaje += `%0A%0A📌 *Nota:* Crear usuario en la plataforma con rol de dependiente o admin según corresponda.`;
+
+        // Prevenir doble clic
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparando enlace...';
+
+        try {
+            // URL de WhatsApp (usando api.whatsapp.com para mejor compatibilidad)
+            const url = `https://api.whatsapp.com/send?phone=${TELEFONO}&text=${mensaje}`;
+            
+            // Mostrar mensaje de éxito con el enlace (por si no abre automáticamente)
+            successDiv.innerHTML = `✅ Solicitud preparada. <a href="${url}" target="_blank" style="color:var(--success);">Haz clic aquí</a> si no se abre automáticamente.`;
+            successDiv.style.display = 'block';
+            
+            // Abrir WhatsApp en nueva pestaña
+            window.open(url, '_blank');
+            
+            // Limpiar campos (opcional)
+            // document.getElementById('email').value = '';
+            // document.getElementById('password').value = '';
+            // document.getElementById('nombre').value = '';
+        } catch (err) {
+            errorDiv.innerText = '❌ Error al generar el enlace: ' + err.message;
+            errorDiv.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fab fa-whatsapp"></i> Solicitar por WhatsApp';
+        }
+    });
+</script>
+</body>
+</html>
