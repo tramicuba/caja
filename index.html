@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Acceso | Sistema Gestión Nostalgia Cubana</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config-auth.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --primary: #3b82f6; --dark: #0f172a; --error: #ef4444; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--dark);
+            color: white;
+            display: flex;
+            height: 100vh;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .login-card {
+            background: #1e293b;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 380px;
+        }
+        h2 { text-align: center; margin-bottom: 30px; font-weight: 300; }
+        .input-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: #94a3b8; }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: white;
+        }
+        .password-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .password-wrapper input {
+            padding-right: 40px;
+        }
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        .toggle-password:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .error-msg {
+            color: var(--error);
+            font-size: 0.8rem;
+            text-align: center;
+            margin-top: 15px;
+            display: none;
+            background: rgba(239,68,68,0.1);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .user-counter {
+            margin-top: 25px;
+            text-align: center;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            border-top: 1px solid #334155;
+            padding-top: 20px;
+        }
+        .counter-number { font-weight: bold; color: var(--primary); }
+        .solicitar-link {
+            text-align: center;
+            margin-top: 15px;
+        }
+        .solicitar-link a {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+        .solicitar-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<div class="login-card">
+    <h2>Sistema Gestión</h2>
+    <div class="input-group">
+        <label>Correo Electrónico</label>
+        <input type="email" id="email" placeholder="ejemplo@estudio.com">
+    </div>
+    <div class="input-group">
+        <label>Contraseña</label>
+        <div class="password-wrapper">
+            <input type="password" id="password" placeholder="••••••••">
+            <button type="button" class="toggle-password" id="togglePasswordBtn">
+                <i class="fas fa-eye"></i>
+            </button>
+        </div>
+    </div>
+    <div class="input-group">
+        <label>Rol de Acceso</label>
+        <select id="role">
+            <option value="admin">Administrador (Dueño)</option>
+            <option value="dependiente">Dependiente (Ventas)</option>
+        </select>
+    </div>
+    <button id="loginBtn">Iniciar Sesión</button>
+    <div id="error" class="error-msg"></div>
+
+    <!-- Enlace para redirigir a la solicitud de usuario -->
+    <div class="solicitar-link">
+        <a href="solicitar-usuario.html">
+            <i class="fas fa-user-plus"></i> ¿No tienes usuario? Solicita acceso
+        </a>
+    </div>
+
+    <div class="user-counter">
+        <i class="fas fa-users"></i> USUARIOS REGISTRADOS: 
+        <span id="userCount" class="counter-number">...</span>
+    </div>
+</div>
+
+<script>
+    // Toggle para mostrar/ocultar contraseña
+    const toggleBtn = document.getElementById('togglePasswordBtn');
+    const passwordInput = document.getElementById('password');
+    const eyeIcon = toggleBtn.querySelector('i');
+
+    toggleBtn.addEventListener('click', () => {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        if (type === 'password') {
+            eyeIcon.classList.remove('fa-eye-slash');
+            eyeIcon.classList.add('fa-eye');
+        } else {
+            eyeIcon.classList.remove('fa-eye');
+            eyeIcon.classList.add('fa-eye-slash');
+        }
+    });
+
+    // Función de login (existente)
+    async function login() {
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const selectedRole = document.getElementById('role').value;
+        const errorDiv = document.getElementById('error');
+        const btn = document.getElementById('loginBtn');
+
+        errorDiv.style.display = 'none';
+        btn.innerText = "Verificando...";
+        btn.disabled = true;
+
+        try {
+            const sb = window.supabaseInstance;
+            const { data, error } = await sb.auth.signInWithPassword({ email, password });
+            if (error) throw new Error("Credenciales inválidas.");
+
+            const { data: profile, error: profileError } = await sb
+                .from('perfiles')
+                .select('rol, eliminado')
+                .eq('id', data.user.id)
+                .single();
+
+            if (profileError || !profile) throw new Error("Perfil no encontrado.");
+            if (profile.eliminado) throw new Error("Cuenta desactivada.");
+            if (profile.rol !== selectedRole) throw new Error(`No tienes permiso de ${selectedRole}.`);
+
+            // Redirigir según rol
+            const paginas = { superadmin: 'superadmin.html', admin: 'admin.html', dependiente: 'caja.html' };
+            window.location.href = paginas[profile.rol];
+        } catch (err) {
+            errorDiv.innerText = err.message;
+            errorDiv.style.display = 'block';
+            btn.innerText = "Iniciar Sesión";
+            btn.disabled = false;
+        }
+    }
+
+    // Contador de usuarios
+    async function cargarContadorUsuarios() {
+        const supabase = window.supabaseInstance;
+        try {
+            const { count, error } = await supabase
+                .from('perfiles')
+                .select('*', { count: 'exact', head: true });
+            if (!error && count !== null) {
+                document.getElementById('userCount').innerText = count;
+            } else {
+                document.getElementById('userCount').innerText = '0';
+            }
+        } catch (err) {
+            console.error("Error al contar usuarios:", err);
+            document.getElementById('userCount').innerText = '?';
+        }
+    }
+
+    document.getElementById('loginBtn').addEventListener('click', login);
+    document.addEventListener('DOMContentLoaded', cargarContadorUsuarios);
+</script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Cuadre Administrador | Nostalgia Cubana</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config-auth.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --primary: #2563eb; --dark: #0f172a; --card: #1e293b; --success: #10b981; --danger: #ef4444; --text-muted: #94a3b8; --border: #334155; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--dark); color: white; font-family: 'Inter', sans-serif; }
+        .sidebar { width: 260px; background: var(--card); height: 100vh; position: fixed; border-right: 1px solid var(--border); padding: 30px 20px; overflow-y: auto; }
+        .main-content { margin-left: 260px; padding: 40px; }
+        .nav-link { display: block; padding: 12px 15px; color: var(--text-muted); text-decoration: none; border-radius: 8px; margin-bottom: 10px; }
+        .nav-link:hover, .nav-link.active { background: rgba(37,99,235,0.1); color: var(--primary); }
+        .card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); padding: 20px; margin-bottom: 30px; }
+        .filter-bar { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { flex: 1; min-width: 200px; }
+        label { display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 0.8rem; }
+        input, button { background: #0f172a; border: 1px solid var(--border); color: white; padding: 10px; border-radius: 8px; width: 100%; }
+        button { background: var(--primary); cursor: pointer; font-weight: 600; }
+        .export-btn { background: var(--success); margin-left: 10px; }
+        .table-container { overflow-x: auto; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; min-width: 800px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--text-muted); }
+        tfoot td { background: rgba(37,99,235,0.2); font-weight: bold; border-top: 2px solid var(--primary); }
+        .btn-logout { margin-top: 50px; color: var(--danger); cursor: pointer; border: 1px solid var(--danger); padding: 10px; text-align: center; border-radius: 8px; }
+        .menu-toggle { display: none; position: fixed; top: 15px; left: 15px; background: var(--primary); padding: 10px 15px; border-radius: 8px; z-index: 101; cursor: pointer; }
+        @media (max-width: 768px) {
+            .menu-toggle { display: block; }
+            .sidebar { transform: translateX(-100%); width: 80%; max-width: 280px; position: fixed; top: 0; left: 0; height: 100vh; transition: transform 0.3s; }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; padding: 60px 15px 20px; }
+            .filter-bar { flex-direction: column; align-items: stretch; }
+            .export-btn { margin-left: 0; margin-top: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+    <div class="sidebar" id="sidebar">
+        <h2 style="color: var(--primary);">Nostalgia Cubana</h2>
+        <nav>
+            <a href="admin.html" class="nav-link"><i class="fas fa-home"></i> Inicio</a>
+            <a href="gestion-stock.html" class="nav-link"><i class="fas fa-box"></i> Inventario</a>
+            <a href="reportes.html" class="nav-link"><i class="fas fa-chart-bar"></i> Reportes</a>
+            <a href="cuadre-admin.html" class="nav-link active"><i class="fas fa-clipboard-list"></i> Cuadre Admin</a>
+            <a href="gestion-dependientes.html" class="nav-link"><i class="fas fa-users"></i> Dependientes</a>
+        </nav>
+        <div class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</div>
+    </div>
+
+    <div class="main-content">
+        <h1>Cuadre Administrador</h1>
+        <div class="card">
+            <div class="filter-bar">
+                <div class="filter-group"><label>Inicio</label><input type="datetime-local" id="fechaInicio"></div>
+                <div class="filter-group"><label>Fin</label><input type="datetime-local" id="fechaFin"></div>
+                <div class="filter-group"><button id="filtrarBtn">Filtrar</button><button id="exportarBtn" class="export-btn">Exportar CSV</button></div>
+            </div>
+        </div>
+        <div class="card">
+            <h3>Resumen de Ventas y Stock</h3>
+            <div class="table-container">
+                <table id="tablaCuadre">
+                    <thead><tr><th>#</th><th>Producto</th><th>Inicio</th><th>Vendidos</th><th>Precio (U)</th><th>Final</th><th>Total ($)</th></tr></thead>
+                    <tbody><tr><td colspan="7">Cargando...</td></tr></tbody>
+                    <tfoot id="totalFooter" style="display:none;"><tr><td colspan="6"><strong>TOTAL GENERAL</strong></td><td id="totalGeneral"></td></tr></tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="card" id="movimientosCard" style="display:none;">
+            <h3>Productos con movimientos manuales</h3>
+            <div class="table-container"><table id="tablaMovimientos"><thead><tr><th>Producto</th><th>Fecha</th><th>Tipo</th><th>Cantidad</th><th>Motivo</th></tr></thead><tbody id="movimientosBody"></tbody></table></div>
+        </div>
+    </div>
+
+    <script>
+        const sb = window.supabaseInstance;
+        let adminId = null;
+
+        async function cargarCuadre() {
+            const inicioStr = document.getElementById('fechaInicio').value, finStr = document.getElementById('fechaFin').value;
+            if (!inicioStr || !finStr) return;
+            const inicioISO = new Date(inicioStr).toISOString(), finISO = new Date(finStr).toISOString();
+
+            const { data: productos } = await sb.from('productos').select('*').eq('owner_id', adminId);
+            const { data: ventas } = await sb.from('ventas').select('producto_id, cantidad, precio_total').eq('owner_id', adminId).eq('eliminada', false).gte('created_at', inicioISO).lte('created_at', finISO);
+            const { data: ajustes } = await sb.from('ajustes_stock').select('*, productos(nombre)').eq('owner_id', adminId).gte('created_at', inicioISO).lte('created_at', finISO).order('created_at', { ascending: false });
+
+            // Mostrar movimientos manuales
+            const movCard = document.getElementById('movimientosCard');
+            const movBody = document.getElementById('movimientosBody');
+            if (ajustes && ajustes.length) {
+                movCard.style.display = 'block';
+                movBody.innerHTML = '';
+                for (const a of ajustes) {
+                    const nombre = a.productos?.nombre || 'Producto eliminado';
+                    const tipo = a.cantidad > 0 ? 'Agregado (entrada)' : 'Retirado (salida)';
+                    const fecha = new Date(a.created_at).toLocaleString();
+                    movBody.innerHTML += `<tr><td>${window.escapeHtml(nombre)}</td><td>${fecha}</td><td>${tipo}</td><td>${Math.abs(a.cantidad)}</td><td>${window.escapeHtml(a.motivo || '')}</td></tr>`;
+                }
+            } else {
+                movCard.style.display = 'none';
+            }
+
+            const ventasMap = new Map();
+            if (ventas) ventas.forEach(v => {
+                const ex = ventasMap.get(v.producto_id) || { cant: 0, total: 0 };
+                ex.cant += v.cantidad || 1;
+                ex.total += v.precio_total || 0;
+                ventasMap.set(v.producto_id, ex);
+            });
+
+            const resultados = [];
+            for (const p of productos || []) {
+                const vendido = ventasMap.get(p.id) || { cant: 0, total: 0 };
+                const stockActual = p.stock || 0;
+                const inicio = stockActual + vendido.cant;
+                if (inicio === 0 && vendido.cant === 0 && stockActual === 0) continue;
+                resultados.push({ nombre: p.nombre, inicio, vendidos: vendido.cant, precio: p.precio || 0, final: stockActual, total: vendido.total });
+            }
+            resultados.sort((a, b) => a.nombre.localeCompare(b.nombre));
+            renderizarTabla(resultados);
+        }
+
+        function renderizarTabla(data) {
+            const tbody = document.querySelector('#tablaCuadre tbody');
+            const footer = document.getElementById('totalFooter');
+            tbody.innerHTML = '';
+            let totalGeneral = 0;
+            data.forEach((r, idx) => {
+                totalGeneral += r.total;
+                tbody.innerHTML += `<tr>
+                    <td>${idx+1}</td>
+                    <td>${window.escapeHtml(r.nombre)}</td>
+                    <td>${r.inicio}</td>
+                    <td>${r.vendidos}</td>
+                    <td>$${r.precio.toFixed(2)}</td>
+                    <td>${r.final}</td>
+                    <td>$${r.total.toFixed(2)}</td>
+                </tr>`;
+            });
+            document.getElementById('totalGeneral').innerHTML = `$${totalGeneral.toFixed(2)}`;
+            if (footer) footer.style.display = 'table-footer-group';
+        }
+
+        async function exportarCSV() {
+            const inicioStr = document.getElementById('fechaInicio').value, finStr = document.getElementById('fechaFin').value;
+            if (!inicioStr || !finStr) return;
+            const inicioISO = new Date(inicioStr).toISOString(), finISO = new Date(finStr).toISOString();
+            const { data: productos } = await sb.from('productos').select('*').eq('owner_id', adminId);
+            const { data: ventas } = await sb.from('ventas').select('producto_id, cantidad, precio_total').eq('owner_id', adminId).eq('eliminada', false).gte('created_at', inicioISO).lte('created_at', finISO);
+            const { data: ajustes } = await sb.from('ajustes_stock').select('*, productos(nombre)').eq('owner_id', adminId).gte('created_at', inicioISO).lte('created_at', finISO);
+            const ventasMap = new Map();
+            if (ventas) ventas.forEach(v => {
+                const ex = ventasMap.get(v.producto_id) || { cant: 0, total: 0 };
+                ex.cant += v.cantidad || 1;
+                ex.total += v.precio_total || 0;
+                ventasMap.set(v.producto_id, ex);
+            });
+            const resultados = [];
+            for (const p of productos || []) {
+                const vendido = ventasMap.get(p.id) || { cant: 0, total: 0 };
+                const stockActual = p.stock || 0;
+                const inicio = stockActual + vendido.cant;
+                if (inicio === 0 && vendido.cant === 0 && stockActual === 0) continue;
+                resultados.push({ nombre: p.nombre, inicio, vendidos: vendido.cant, precio: p.precio || 0, final: stockActual, total: vendido.total });
+            }
+            resultados.sort((a,b) => a.nombre.localeCompare(b.nombre));
+            let csv = "#;Producto;Inicio;Vendidos;Precio (U);Final;Total\n";
+            let totalGen = 0;
+            resultados.forEach((r,i) => {
+                totalGen += r.total;
+                csv += `${i+1};"${r.nombre.replace(/"/g,'""')}";${r.inicio};${r.vendidos};${r.precio.toFixed(2)};${r.final};${r.total.toFixed(2)}\n`;
+            });
+            csv += `;;;TOTAL;;;${totalGen.toFixed(2)}\n\n`;
+            if (ajustes && ajustes.length) {
+                csv += "Movimientos manuales en el período\n";
+                csv += "Producto;Fecha;Tipo;Cantidad;Motivo\n";
+                for (const a of ajustes) {
+                    const nombre = a.productos?.nombre || 'Producto eliminado';
+                    const tipo = a.cantidad > 0 ? 'Agregado' : 'Retirado';
+                    const fecha = new Date(a.created_at).toLocaleString();
+                    csv += `"${nombre.replace(/"/g,'""')}";"${fecha}";${tipo};${Math.abs(a.cantidad)};"${(a.motivo || '').replace(/"/g,'""')}"\n`;
+                }
+            }
+            const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `cuadre_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.csv`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const perfil = await window.validarAccesoGlobal(['admin']);
+            if (!perfil) return;
+            adminId = perfil.id;
+            const hoy = new Date();
+            document.getElementById('fechaInicio').value = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0).toISOString().slice(0,16);
+            document.getElementById('fechaFin').value = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59).toISOString().slice(0,16);
+            document.getElementById('filtrarBtn').onclick = cargarCuadre;
+            document.getElementById('exportarBtn').onclick = exportarCSV;
+            await cargarCuadre();
+        });
+
+        const toggle = document.getElementById('menuToggle'), side = document.getElementById('sidebar');
+        toggle.addEventListener('click', () => side.classList.toggle('open'));
+        document.addEventListener('click', (e) => { if (window.innerWidth <= 768 && !side.contains(e.target) && !toggle.contains(e.target) && side.classList.contains('open')) side.classList.remove('open'); });
+    </script>
+</body>
+</html>

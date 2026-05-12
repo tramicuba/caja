@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Mis Turnos | Nostalgia Cubana</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config-auth.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --primary: #2563eb; --dark: #0f172a; --card: #1e293b; --success: #10b981; --danger: #ef4444; --text-muted: #94a3b8; --border: #334155; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--dark); color: white; }
+        .sidebar { width: 260px; background: var(--card); height: 100vh; position: fixed; border-right: 1px solid var(--border); padding: 30px 20px; transition: transform 0.3s; z-index: 100; overflow-y: auto; }
+        .main-content { margin-left: 260px; padding: 40px; transition: margin 0.3s; }
+        .nav-link { display: block; padding: 12px 15px; color: var(--text-muted); text-decoration: none; border-radius: 8px; margin-bottom: 10px; }
+        .nav-link:hover, .nav-link.active { background: rgba(37,99,235,0.1); color: var(--primary); }
+        .btn-logout { margin-top: 50px; color: var(--danger); cursor: pointer; border: 1px solid var(--danger); padding: 10px; text-align: center; border-radius: 8px; }
+        .vencimiento-badge { font-size: 0.72rem; padding: 4px 10px; border-radius: 20px; font-weight: 600; display: inline-block; margin-top: 10px; }
+        .vence-ok { background: rgba(16,185,129,0.15); color: var(--success); }
+        .vence-pronto { background: rgba(245,158,11,0.15); color: #f59e0b; }
+        .turnos-table { width: 100%; border-collapse: collapse; }
+        .turnos-table th, .turnos-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        .turnos-table th { color: var(--text-muted); font-weight: 600; }
+        .turno-row { cursor: pointer; transition: 0.2s; }
+        .turno-row:hover { background: rgba(37,99,235,0.1); }
+        .export-btn-turno { background: var(--success); color: white; border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.7rem; margin-left: 10px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--card); border-radius: 20px; width: 90%; max-width: 1000px; max-height: 80vh; overflow-y: auto; padding: 20px; border: 1px solid var(--border); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+        .modal-close { background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; }
+        .menu-toggle { display: none; position: fixed; top: 15px; left: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; padding: 10px 15px; z-index: 101; cursor: pointer; }
+        @media (max-width: 768px) {
+            .menu-toggle { display: block; }
+            .sidebar { transform: translateX(-100%); width: 80%; max-width: 280px; }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; padding: 60px 15px 20px; }
+        }
+    </style>
+</head>
+<body>
+    <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+    <div class="sidebar" id="sidebar">
+        <h2 style="color: var(--primary);">Nostalgia Cubana</h2>
+        <div id="vencimiento-info"></div>
+        <nav>
+            <a href="caja.html" class="nav-link"><i class="fas fa-cash-register"></i> Caja</a>
+            <a href="mis-ventas.html" class="nav-link"><i class="fas fa-chart-line"></i> Ventas Realizadas</a>
+            <a href="mis-turnos.html" class="nav-link active"><i class="fas fa-clipboard-list"></i> CUADRE</a>
+        </nav>
+        <div class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</div>
+    </div>
+
+    <div class="main-content">
+        <h1><i class="fas fa-clipboard-list"></i> Historial de Turnos</h1>
+        <div class="table-container">
+            <table class="turnos-table">
+                <thead>
+                    <tr><th>#</th><th>Inicio (Cuba)</th><th>Fin (Cuba)</th><th>Duración</th><th>Ventas ($)</th><th>Ganancia ($)</th><th>Exportar</th></tr>
+                </thead>
+                <tbody id="turnosBody"><tr><td colspan="7">Cargando...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="modalTurno" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Ventas del Turno</h2><button class="modal-close" id="closeModalBtn">&times;</button></div>
+            <div class="table-container"><table style="width:100%"><thead><tr><th>Fecha y Hora (Cuba)</th><th>Producto</th><th>Cantidad</th><th>Total</th><th>Ganancia</th></tr></thead><tbody id="modalVentasBody"></tbody></table></div>
+        </div>
+    </div>
+
+    <script>
+        const sb = window.supabaseInstance;
+        let vendedorId = null;
+
+        function formatearFechaCuba(isoString) {
+            if (!isoString) return '';
+            const fecha = new Date(isoString);
+            return fecha.toLocaleString('es-ES', { timeZone: 'America/Havana' });
+        }
+
+        async function cargarTurnos() {
+            const { data: turnos, error } = await sb
+                .from('turnos')
+                .select('*')
+                .eq('vendedor_id', vendedorId)
+                .order('inicio', { ascending: false });
+            const tbody = document.getElementById('turnosBody');
+            if (error) {
+                console.error(error);
+                tbody.innerHTML = '<tr><td colspan="7">Error al cargar turnos</td></tr>';
+                return;
+            }
+            if (!turnos || turnos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7">No hay turnos registrados</td></tr>';
+                return;
+            }
+            tbody.innerHTML = '';
+            let count = 1;
+            for (const t of turnos) {
+                const inicioLocal = formatearFechaCuba(t.inicio);
+                let finLocal = 'Activo aún';
+                let duracion = 'En curso';
+                let totalVentas = 0, totalGanancia = 0;
+
+                if (t.fin) {
+                    finLocal = formatearFechaCuba(t.fin);
+                    const diffMs = new Date(t.fin) - new Date(t.inicio);
+                    const horas = Math.floor(diffMs / 3600000);
+                    const minutos = Math.floor((diffMs % 3600000) / 60000);
+                    duracion = `${horas}h ${minutos}m`;
+                }
+
+                const end = t.fin || new Date().toISOString();
+                const { data: ventasTurno, error: vError } = await sb
+                    .from('ventas')
+                    .select('precio_total, precio_compra_momento, cantidad')
+                    .eq('vendedor_id', vendedorId)
+                    .eq('eliminada', false)
+                    .gte('created_at', t.inicio)
+                    .lte('created_at', end);
+                if (!vError && ventasTurno) {
+                    ventasTurno.forEach(v => {
+                        const pt = v.precio_total || 0;
+                        const cant = v.cantidad || 1;
+                        const costo = (v.precio_compra_momento || 0) * cant;
+                        totalVentas += pt;
+                        totalGanancia += pt - costo;
+                    });
+                }
+
+                const row = document.createElement('tr');
+                row.className = 'turno-row';
+                row.setAttribute('data-inicio', t.inicio);
+                row.setAttribute('data-fin', t.fin || '');
+                row.innerHTML = `
+                    <td>${count++}</td>
+                    <td>${window.escapeHtml(inicioLocal)}</td>
+                    <td>${window.escapeHtml(finLocal)}</td>
+                    <td>${window.escapeHtml(duracion)}</td>
+                    <td>$${totalVentas.toFixed(2)}</td>
+                    <td style="color:var(--success);">$${totalGanancia.toFixed(2)}</td>
+                    <td>
+                        <button class="export-btn-turno" data-inicio="${t.inicio}" data-fin="${t.fin || ''}" title="Exportar ventas"><i class="fas fa-file-excel"></i> Exportar</button>
+                    </td>
+                `;
+                row.addEventListener('click', (e) => {
+                    if (!e.target.closest('.export-btn-turno')) {
+                        verVentasTurno(t.inicio, t.fin);
+                    }
+                });
+                tbody.appendChild(row);
+            }
+
+            document.querySelectorAll('.export-btn-turno').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const inicio = btn.getAttribute('data-inicio');
+                    const fin = btn.getAttribute('data-fin') || null;
+                    await exportarTurnoCSV(inicio, fin);
+                });
+            });
+        }
+
+        async function verVentasTurno(inicioISO, finISO) {
+            const finReal = finISO || new Date().toISOString();
+            try {
+                const { data: ventas, error } = await sb
+                    .from('ventas')
+                    .select('*')
+                    .eq('vendedor_id', vendedorId)
+                    .eq('eliminada', false)
+                    .gte('created_at', inicioISO)
+                    .lte('created_at', finReal)
+                    .order('created_at', { ascending: false });
+                if (error) throw error;
+                const modalBody = document.getElementById('modalVentasBody');
+                modalBody.innerHTML = '';
+                if (!ventas || ventas.length === 0) {
+                    modalBody.innerHTML = '<tr><td colspan="5">No hay ventas en este turno</td></tr>';
+                    document.getElementById('modalTurno').classList.add('active');
+                    return;
+                }
+
+                const productoIds = [...new Set(ventas.map(v => v.producto_id).filter(id => id))];
+                let productosMap = new Map();
+                if (productoIds.length) {
+                    const { data: prods } = await sb.from('productos').select('id, nombre').in('id', productoIds);
+                    if (prods) prods.forEach(p => productosMap.set(p.id, p.nombre));
+                }
+
+                let totalVentas = 0, totalGanancia = 0;
+                for (const v of ventas) {
+                    const producto = productosMap.get(v.producto_id) || 'Producto eliminado';
+                    const cantidad = v.cantidad || 1;
+                    const precioTotal = v.precio_total || 0;
+                    const costoTotal = (v.precio_compra_momento || 0) * cantidad;
+                    const ganancia = precioTotal - costoTotal;
+                    totalVentas += precioTotal;
+                    totalGanancia += ganancia;
+                    const fechaHoraLocal = formatearFechaCuba(v.created_at);
+                    modalBody.innerHTML += `
+                        <tr>
+                            <td>${window.escapeHtml(fechaHoraLocal)}</td>
+                            <td>${window.escapeHtml(producto)}</td>
+                            <td>${cantidad}</td>
+                            <td>$${precioTotal.toFixed(2)}</td>
+                            <td style="color:var(--success);">$${ganancia.toFixed(2)}</td>
+                         </tr>
+                    `;
+                }
+                modalBody.innerHTML += `
+                    <tr style="background:rgba(37,99,235,0.1); font-weight:bold;">
+                        <td colspan="3">Totales</td>
+                        <td>$${totalVentas.toFixed(2)}</td>
+                        <td>$${totalGanancia.toFixed(2)}</td>
+                    </tr>
+                `;
+                document.getElementById('modalTurno').classList.add('active');
+            } catch (err) {
+                console.error(err);
+                alert('Error al cargar ventas del turno: ' + err.message);
+            }
+        }
+
+        async function exportarTurnoCSV(inicioISO, finISO) {
+            const finReal = finISO || new Date().toISOString();
+            try {
+                const { data: ventas, error } = await sb
+                    .from('ventas')
+                    .select('*')
+                    .eq('vendedor_id', vendedorId)
+                    .eq('eliminada', false)
+                    .gte('created_at', inicioISO)
+                    .lte('created_at', finReal);
+                if (error) throw error;
+                if (!ventas || ventas.length === 0) {
+                    alert('No hay ventas en este turno para exportar.');
+                    return;
+                }
+
+                const productoIds = [...new Set(ventas.map(v => v.producto_id).filter(id => id))];
+                let productosMap = new Map();
+                if (productoIds.length) {
+                    const { data: prods } = await sb.from('productos').select('id, nombre').in('id', productoIds);
+                    if (prods) prods.forEach(p => productosMap.set(p.id, p.nombre));
+                }
+
+                const grupos = new Map();
+                for (const v of ventas) {
+                    const nombre = productosMap.get(v.producto_id) || 'Producto eliminado';
+                    const cantidad = v.cantidad || 1;
+                    const precioTotal = v.precio_total || 0;
+                    const precioUnitario = cantidad > 0 ? precioTotal / cantidad : 0;
+                    const key = `${nombre}|${precioUnitario.toFixed(2)}`;
+                    if (grupos.has(key)) {
+                        const grupo = grupos.get(key);
+                        grupo.cantidad += cantidad;
+                        grupo.total += precioTotal;
+                    } else {
+                        grupos.set(key, { producto: nombre, precioUnitario, cantidad, total: precioTotal });
+                    }
+                }
+
+                const separador = ';';
+                let csv = "Producto" + separador + "Cantidad vendida" + separador + "Precio de venta (U)" + separador + "Total\n";
+                let totalGeneral = 0;
+                for (const grupo of grupos.values()) {
+                    csv += `"${window.escapeCSV(grupo.producto)}"${separador}${grupo.cantidad}${separador}$${grupo.precioUnitario.toFixed(2)}${separador}$${grupo.total.toFixed(2)}\n`;
+                    totalGeneral += grupo.total;
+                }
+                csv += `"TOTAL GENERAL"${separador}${separador}${separador}$${totalGeneral.toFixed(2)}\n`;
+
+                const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.href = url;
+                const fechaInicioShort = new Date(inicioISO).toISOString().slice(0,16).replace(/[-:]/g, '');
+                link.download = `turno_${fechaInicioShort}.csv`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                console.error(err);
+                alert('Error al exportar: ' + err.message);
+            }
+        }
+
+        // Función auxiliar para CSV
+        window.escapeCSV = function(str) {
+            if (!str) return '';
+            if (str.includes('"') || str.includes(';') || str.includes(',')) {
+                return str.replace(/"/g, '""');
+            }
+            return str;
+        };
+
+        // Cerrar modal
+        document.getElementById('closeModalBtn').addEventListener('click', () => {
+            document.getElementById('modalTurno').classList.remove('active');
+        });
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('modalTurno');
+            if (e.target === modal) modal.classList.remove('active');
+        });
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const perfil = await window.validarAccesoGlobal(['dependiente', 'admin']);
+            if (!perfil) return;
+            vendedorId = perfil.id;
+
+            if (perfil.vencimiento) {
+                const dias = Math.ceil((new Date(perfil.vencimiento) - new Date()) / 86400000);
+                const clase = dias <= 7 ? 'vence-pronto' : 'vence-ok';
+                const texto = dias <= 0 ? 'Suscripción vencida' : `Vence en ${dias} días`;
+                document.getElementById('vencimiento-info').innerHTML = `<span class="vencimiento-badge ${clase}">${texto}</span>`;
+            }
+
+            await cargarTurnos();
+        });
+
+        const toggle = document.getElementById('menuToggle'), side = document.getElementById('sidebar');
+        toggle.addEventListener('click', () => side.classList.toggle('open'));
+        document.addEventListener('click', (e) => { if (window.innerWidth <= 768 && !side.contains(e.target) && !toggle.contains(e.target) && side.classList.contains('open')) side.classList.remove('open'); });
+    </script>
+</body>
+</html>

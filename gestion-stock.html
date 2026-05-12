@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Inventario | Nostalgia Cubana</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config-auth.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --primary: #2563eb; --dark: #0f172a; --card: #1e293b; --danger: #ef4444; --success: #10b981; --text-muted: #94a3b8; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--dark); color: white; }
+        .sidebar { width: 260px; background: var(--card); height: 100vh; position: fixed; border-right: 1px solid #334155; padding: 30px 20px; transition: transform 0.3s; z-index: 100; overflow-y: auto; }
+        .main-content { margin-left: 260px; padding: 40px; transition: margin 0.3s; }
+        .nav-link { display: block; padding: 12px 15px; color: var(--text-muted); text-decoration: none; border-radius: 8px; margin-bottom: 10px; }
+        .nav-link:hover, .nav-link.active { background: rgba(37,99,235,0.1); color: var(--primary); }
+        .card { background: var(--card); padding: 25px; border-radius: 15px; border: 1px solid #334155; margin-bottom: 30px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 25px; background: rgba(255,255,255,0.03); padding: 20px; border-radius: 10px; }
+        input { background: #0f172a; border: 1px solid #334155; color: white; padding: 12px; border-radius: 8px; width: 100%; }
+        .btn-save { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 700px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #334155; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+        .low-stock { background: rgba(239,68,68,0.2); color: var(--danger); }
+        .ok-stock { background: rgba(16,185,129,0.2); color: var(--success); }
+        .btn-logout { margin-top: 50px; color: var(--danger); cursor: pointer; border: 1px solid var(--danger); padding: 10px; text-align: center; border-radius: 8px; }
+        .stock-control { display: inline-flex; gap: 5px; align-items: center; }
+        .stock-btn { background: var(--primary); border: none; color: white; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .delete-btn { background: none; border: none; cursor: pointer; font-size: 1.2rem; color: var(--danger); margin-left: 10px; }
+        .vencimiento-badge { font-size: 0.72rem; padding: 4px 10px; border-radius: 20px; display: inline-block; margin-top: 10px; }
+        .vence-ok { background: rgba(16,185,129,0.15); color: var(--success); }
+        .vence-pronto { background: rgba(245,158,11,0.15); color: #f59e0b; }
+        .menu-toggle { display: none; position: fixed; top: 15px; left: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; padding: 10px 15px; z-index: 101; cursor: pointer; }
+        @media (max-width: 768px) {
+            .menu-toggle { display: block; }
+            .sidebar { transform: translateX(-100%); width: 80%; max-width: 280px; }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; padding: 60px 15px 20px; }
+            .form-grid { grid-template-columns: 1fr; }
+            .btn-save { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+    <div class="sidebar" id="sidebar">
+        <h2 style="color: var(--primary);">Nostalgia Cubana</h2>
+        <div id="vencimiento-info"></div>
+        <nav>
+            <a href="admin.html" class="nav-link"><i class="fas fa-home"></i> Inicio</a>
+            <a href="gestion-stock.html" class="nav-link active"><i class="fas fa-box"></i> Inventario</a>
+            <a href="reportes.html" class="nav-link"><i class="fas fa-chart-bar"></i> Reportes de Ventas</a>
+            <a href="cuadre-admin.html" class="nav-link"><i class="fas fa-clipboard-list"></i> Cuadre Administrador</a>
+            <a href="gestion-dependientes.html" class="nav-link"><i class="fas fa-users"></i> Dependientes</a>
+        </nav>
+        <div class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</div>
+    </div>
+
+    <div class="main-content">
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <h1>Gestión de Productos</h1>
+            <div id="user-info" style="color: var(--text-muted);"></div>
+        </header>
+
+        <div class="card">
+            <div class="form-grid">
+                <input type="text" id="nombre" placeholder="Nombre">
+                <input type="number" id="stock" placeholder="Stock inicial">
+                <input type="number" id="precio_compra" placeholder="Costo Compra">
+                <input type="number" id="precio" placeholder="Precio Venta">
+                <button class="btn-save" id="guardarBtn">Guardar Producto</button>
+            </div>
+            <div class="table-container">
+                <table id="tabla-stock">
+                    <thead><tr><th>Producto</th><th>Stock</th><th>Costo</th><th>Venta</th><th>Ganancia</th><th>Acciones</th></tr></thead>
+                    <tbody id="lista-stock"><tr><td colspan="6">Cargando...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const sb = window.supabaseInstance;
+        let adminId = null;
+        let productosList = [];
+
+        async function fetchData() {
+            const { data, error } = await sb.from('productos').select('*').eq('owner_id', adminId).order('nombre');
+            if (error) { console.error(error); return; }
+            productosList = data || [];
+            renderTabla();
+        }
+
+        function renderTabla() {
+            const container = document.getElementById('lista-stock');
+            if (!productosList.length) {
+                container.innerHTML = '<tr><td colspan="6">Sin productos.</td></tr>';
+                return;
+            }
+            container.innerHTML = '';
+            for (const prod of productosList) {
+                const margin = (prod.precio || 0) - (prod.precio_compra || 0);
+                const stockClass = prod.stock <= 5 ? 'low-stock' : 'ok-stock';
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><b>${window.escapeHtml(prod.nombre)}</b></td>
+                    <td>
+                        <div class="stock-control">
+                            <button class="stock-btn minus" data-id="${prod.id}">-</button>
+                            <span class="badge ${stockClass}">${prod.stock}</span>
+                            <button class="stock-btn plus" data-id="${prod.id}">+</button>
+                        </div>
+                    </td>
+                    <td>$${Number(prod.precio_compra || 0).toFixed(2)}</td>
+                    <td>$${Number(prod.precio || 0).toFixed(2)}</td>
+                    <td style="color:var(--success);">+$${margin.toFixed(2)}</td>
+                    <td><button class="delete-btn" data-id="${prod.id}"><i class="fas fa-trash-alt"></i></button></td>
+                `;
+                container.appendChild(row);
+            }
+            // Asignar eventos después de insertar
+            document.querySelectorAll('.stock-btn.minus').forEach(btn => btn.addEventListener('click', async (e) => { e.stopPropagation(); await ajustarStock(btn.dataset.id, 'minus'); }));
+            document.querySelectorAll('.stock-btn.plus').forEach(btn => btn.addEventListener('click', async (e) => { e.stopPropagation(); await ajustarStock(btn.dataset.id, 'plus'); }));
+            document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', async (e) => { e.stopPropagation(); await removeItem(btn.dataset.id); }));
+        }
+
+        async function ajustarStock(id, tipo) {
+            const producto = productosList.find(p => p.id == id);
+            if (!producto) return;
+            let cantidad, delta;
+            if (tipo === 'plus') {
+                cantidad = parseInt(prompt('Cantidad a AGREGAR:', '1'));
+                if (isNaN(cantidad) || cantidad <= 0) return alert('Número positivo');
+                delta = cantidad;
+            } else {
+                cantidad = parseInt(prompt(`Cantidad a RETIRAR (stock: ${producto.stock}):`, '1'));
+                if (isNaN(cantidad) || cantidad <= 0) return alert('Número positivo');
+                if (cantidad > producto.stock) return alert('Stock insuficiente');
+                delta = -cantidad;
+            }
+            const nuevoStock = producto.stock + delta;
+            const { error } = await sb.from('productos').update({ stock: nuevoStock }).eq('id', id);
+            if (error) return alert('Error: ' + error.message);
+            await sb.from('ajustes_stock').insert({ producto_id: id, cantidad: delta, motivo: `Ajuste manual: ${delta>0 ? 'entrada' : 'salida'} de ${Math.abs(delta)} unidades`, owner_id: adminId, cantidad_signed: delta });
+            producto.stock = nuevoStock;
+            renderTabla();
+        }
+
+        async function guardarProducto() {
+            const nombre = document.getElementById('nombre').value.trim();
+            const stock = parseInt(document.getElementById('stock').value);
+            const costo = parseFloat(document.getElementById('precio_compra').value);
+            const venta = parseFloat(document.getElementById('precio').value);
+            if (!nombre || isNaN(stock) || isNaN(costo) || isNaN(venta)) return alert('Complete campos');
+            const { data: nuevo, error } = await sb.from('productos').insert([{ nombre, stock, precio_compra: costo, precio: venta, owner_id: adminId, created_at: new Date().toISOString() }]).select();
+            if (error) return alert('Error: ' + error.message);
+            if (stock > 0) await sb.from('ajustes_stock').insert({ producto_id: nuevo[0].id, cantidad: stock, motivo: 'Stock inicial', owner_id: adminId, cantidad_signed: stock });
+            document.getElementById('nombre').value = '';
+            document.getElementById('stock').value = '';
+            document.getElementById('precio_compra').value = '';
+            document.getElementById('precio').value = '';
+            await fetchData();
+        }
+
+        async function removeItem(id) { if (confirm('¿Eliminar producto?')) await sb.from('productos').delete().eq('id', id); fetchData(); }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const perfil = await window.validarAccesoGlobal(['admin']);
+            if (!perfil) return;
+            adminId = perfil.id;
+            document.getElementById('user-info').innerHTML = '<i class="fas fa-user-circle"></i> ' + window.escapeHtml(perfil.email);
+            if (perfil.vencimiento) {
+                const dias = Math.ceil((new Date(perfil.vencimiento) - new Date()) / 86400000);
+                const clase = dias <= 7 ? 'vence-pronto' : 'vence-ok';
+                const texto = dias <= 0 ? 'Suscripción vencida' : `Vence en ${dias} días`;
+                document.getElementById('vencimiento-info').innerHTML = `<span class="vencimiento-badge ${clase}">${texto}</span>`;
+            }
+            await fetchData();
+            document.getElementById('guardarBtn').addEventListener('click', guardarProducto);
+        });
+
+        // Sidebar toggle
+        const toggle = document.getElementById('menuToggle'), side = document.getElementById('sidebar');
+        toggle.addEventListener('click', () => side.classList.toggle('open'));
+        document.addEventListener('click', (e) => { if (window.innerWidth <= 768 && !side.contains(e.target) && !toggle.contains(e.target) && side.classList.contains('open')) side.classList.remove('open'); });
+    </script>
+</body>
+</html>
